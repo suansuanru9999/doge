@@ -324,6 +324,23 @@
     }
   }
 
+  // Debounced Cloud Auto-Sync (1500ms after user finishes tweaking parameters)
+  let cloudAutoSyncTimer = null;
+  function triggerCloudAutoSync() {
+    if (cloudAutoSyncTimer) clearTimeout(cloudAutoSyncTimer);
+    cloudAutoSyncTimer = setTimeout(async () => {
+      try {
+        const cloudUrl = (currentConfig.storage && currentConfig.storage.cloudSyncUrl) || DEFAULT_CONFIG.storage.cloudSyncUrl;
+        if (cloudUrl && cloudUrl.trim()) {
+          if (window.StorageService && typeof window.StorageService.saveConfigToCloud === 'function') {
+            await window.StorageService.saveConfigToCloud(currentConfig);
+            console.log('[GameConfig] Auto-synced modified parameters to Cloud Database.');
+          }
+        }
+      } catch (e) {}
+    }, 1500);
+  }
+
   // Active configuration instance (loaded from LocalStorage or defaults)
   let currentConfig = loadFromStorage();
 
@@ -342,26 +359,96 @@
     get audio() { return currentConfig.audio; },
     get storage() { return currentConfig.storage; },
 
-    // Asynchronously load config.json from project static directory
+    // Asynchronously load config.json (static) and Firebase / Cloud Database (realtime authoritative)
     async loadConfigAsync() {
+      let loadedSource = 'storage';
+
+      // 1. Fetch static ./config.json as baseline
       try {
         const res = await fetch('./config.json?t=' + Date.now());
         if (res.ok) {
           const json = await res.json();
           if (json && typeof json === 'object') {
-            // Overwrite memory config with server config.json (authoritative baseline)
             currentConfig = deepMerge(deepClone(DEFAULT_CONFIG), json);
-            // Save to localStorage as synced cache
-            saveToStorage(currentConfig);
-            this.notify('*', currentConfig);
-            console.log('[GameConfig] Loaded config.json authoritative settings from server/static path.');
-            return { success: true, source: 'file' };
+            loadedSource = 'file';
           }
         }
       } catch (err) {
-        console.warn('[GameConfig] Could not fetch ./config.json (falling back to LocalStorage / Defaults):', err);
+        console.warn('[GameConfig] Could not fetch ./config.json:', err);
       }
-      return { success: false, source: 'storage' };
+
+      // 2. Fetch authoritative real-time config from Firebase / Cloud DB
+      try {
+        const cloudUrl = (currentConfig.storage && currentConfig.storage.cloudSyncUrl) || DEFAULT_CONFIG.storage.cloudSyncUrl;
+        const apiKey = (currentConfig.storage && currentConfig.storage.apiKey) || '';
+        if (cloudUrl && cloudUrl.trim()) {
+          let cloudData = null;
+          if (window.StorageService && typeof window.StorageService.loadConfigFromCloud === 'function') {
+            cloudData = await window.StorageService.loadConfigFromCloud();
+          } else {
+            // Direct endpoint resolution fallback
+            let endpoint = cloudUrl.trim();
+            if (endpoint.endsWith('.json')) {
+              const parts = endpoint.split('/');
+              parts[parts.length - 1] = 'config.json';
+              endpoint = parts.join('/');
+            } else {
+              endpoint = endpoint.replace(/\/+$/, '') + '/config.json';
+            }
+            let requestUrl = endpoint;
+            if (apiKey && apiKey.trim().length > 0 && endpoint.includes('firebaseio.com')) {
+              requestUrl += (requestUrl.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(apiKey.trim());
+            }
+            const res = await fetch(requestUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                cloudData = data;
+              }
+            }
+          }
+
+          if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
+            currentConfig = deepMerge(currentConfig, cloudData);
+            loadedSource = 'cloud';
+            console.log('[GameConfig] Authoritative config loaded from Firebase Cloud Database:', cloudData);
+          }
+        }
+      } catch (err) {
+        console.warn('[GameConfig] Cloud config load failed, using local/static:', err);
+      }
+
+      // Save to localStorage as synced cache
+      saveToStorage(currentConfig);
+      this.notify('*', currentConfig);
+      return { success: true, source: loadedSource };
+    },
+
+    // Sync current configuration to cloud database (Firebase)
+    async syncToCloud() {
+      if (window.StorageService && typeof window.StorageService.saveConfigToCloud === 'function') {
+        const res = await window.StorageService.saveConfigToCloud(currentConfig);
+        if (res && res.success) {
+          saveToStorage(currentConfig);
+        }
+        return res;
+      }
+      return { success: false, error: 'StorageService unavailable' };
+    },
+
+    // Pull authoritative configuration from cloud database (Firebase)
+    async pullFromCloud() {
+      let cloudData = null;
+      if (window.StorageService && typeof window.StorageService.loadConfigFromCloud === 'function') {
+        cloudData = await window.StorageService.loadConfigFromCloud();
+      }
+      if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
+        currentConfig = deepMerge(deepClone(DEFAULT_CONFIG), cloudData);
+        saveToStorage(currentConfig);
+        this.notify('*', currentConfig);
+        return { success: true, data: currentConfig };
+      }
+      return { success: false, error: '云端暂未保存任何配置数据 (Cloud config is empty)' };
     },
 
     // Retrieve active ball preset object
@@ -409,6 +496,7 @@
       obj[keys[keys.length - 1]] = value;
       saveToStorage(currentConfig);
       this.notify(path, value);
+      triggerCloudAutoSync();
     },
 
     // Get value by dot path
@@ -453,6 +541,7 @@
 
       saveToStorage(currentConfig);
       this.notify('*', currentConfig);
+      triggerCloudAutoSync();
     },
 
     // Reset all parameters to factory defaults and update LocalStorage
@@ -489,6 +578,7 @@
         currentConfig = deepMerge(deepClone(DEFAULT_CONFIG), parsed);
         saveToStorage(currentConfig);
         this.notify('*', currentConfig);
+        triggerCloudAutoSync();
         return { success: true };
       } catch (err) {
         return { success: false, error: err.message };

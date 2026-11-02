@@ -130,9 +130,62 @@
       }
 
       // Top Quick Actions: Save config.json, Copy config JSON, Export leaderboard.json
+      const btnSyncCloud = document.getElementById('btn-sync-config-cloud');
+      const btnPullCloud = document.getElementById('btn-pull-config-cloud');
       const btnSaveConfigFile = document.getElementById('btn-save-config-file');
       const btnCopyConfigJson = document.getElementById('btn-copy-config-json');
       const btnExportLeaderboard = document.getElementById('btn-export-leaderboard-file');
+
+      if (btnSyncCloud) {
+        btnSyncCloud.addEventListener('click', async () => {
+          btnSyncCloud.disabled = true;
+          btnSyncCloud.textContent = '☁️ 正在上传同步至 Firebase...';
+          const res = window.GameConfig ? await window.GameConfig.syncToCloud() : { success: false, error: 'GameConfig 不可用' };
+          btnSyncCloud.disabled = false;
+          btnSyncCloud.textContent = '☁️ 一键同步配置到云端数据库 (Firebase Sync)';
+
+          if (res && res.success) {
+            if (window.showGameToast) {
+              window.showGameToast('☁️ 游戏配置已成功同步到 Firebase！全网玩家刷新即可读取。');
+            } else {
+              alert('☁️ 游戏配置已成功同步到 Firebase 云端数据库！全网玩家刷新即可读取。');
+            }
+          } else {
+            const err = (res && res.error) ? res.error : '未知错误';
+            if (window.showGameToast) {
+              window.showGameToast('❌ 同步失败: ' + err);
+            } else {
+              alert('❌ 同步到云端失败：' + err);
+            }
+          }
+        });
+      }
+
+      if (btnPullCloud) {
+        btnPullCloud.addEventListener('click', async () => {
+          btnPullCloud.disabled = true;
+          btnPullCloud.textContent = '🔄 正在从云端拉取配置...';
+          const res = window.GameConfig ? await window.GameConfig.pullFromCloud() : { success: false };
+          btnPullCloud.disabled = false;
+          btnPullCloud.textContent = '🔄 从云端实时拉取最新配置 (Pull from Cloud)';
+
+          if (res && res.success) {
+            this.renderTabContent(this.currentTab);
+            if (window.showGameToast) {
+              window.showGameToast('🔄 已成功从 Firebase 拉取并应用最新游戏配置！');
+            } else {
+              alert('🔄 已成功从 Firebase 云端拉取最新配置！参数已即时生效。');
+            }
+          } else {
+            const err = (res && res.error) ? res.error : '云端暂未保存有效配置';
+            if (window.showGameToast) {
+              window.showGameToast('⚠️ ' + err);
+            } else {
+              alert('⚠️ ' + err);
+            }
+          }
+        });
+      }
 
       if (btnSaveConfigFile) {
         btnSaveConfigFile.addEventListener('click', async () => {

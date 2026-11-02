@@ -484,12 +484,18 @@ $$\text{autoScale} = \min\left(1.0, \; \min\left(\frac{W_{\text{screen}}}{W_{\te
      - **开启**：播放清脆打铁解锁音效，解除 `.dev-hidden` 样式显示所有调试控件，弹出顶部赛博提示框 `🛠️ 开发者模式已激活 (Dev Mode ON)`；
      - **再次连点 3 次关闭**：立即隐藏全部开发者控件并自动折叠调试面板，恢复纯净游戏视野，弹出提示 `🔒 开发者模式已关闭 (Dev Mode OFF)`。
 
-### 13.2 配置解耦与“静态文件优先”加载架构 (Config Externalization & Auto-Sync)
-1. **根目录独立 `config.json`**：
+### 13.2 配置解耦与“静态文件 + Firebase 云端数据库双轨优先”加载架构 (Config Externalization & Cloud Sync)
+1. **根目录独立 `config.json` 与云端数据库 (`/config.json`)**：
    - 将整套游戏运行参数抽离为项目根目录下的标准独立文件 `config.json`，源码内置不可变常量 `DEFAULT_GAME_CONFIG`；
-   - **加载优先级**：页面初始化时自动通过 `fetch('./config.json?t=' + Date.now())` 优先拉取静态服务器上的最新配置。当静态服务器配置更新后，全网用户无需清空缓存即可直接体验最新数值平衡调整；若处于离线或单机环境则自动降级读取本地 `localStorage` 或内置默认参数。
-2. **调试台一键覆盖保存与复制**：
+   - **加载优先级 (Cascade)**：
+     1. 首先加载静态 `./config.json?t=` 作为本地基准；
+     2. 若配置了 `cloudSyncUrl`（已预设为 Firebase Realtime Database `https://dogeball-6c1fd-default-rtdb.firebaseio.com/`），游戏启动时自动向 `${cloudSyncUrl}/config.json` 发起 `GET` 请求拉取权威云端配置覆盖内存，全网玩家无需清空缓存即可直接享受最新数值平衡；
+     3. 离线或无网环境下自动平滑降级读取本地 `localStorage` 或内置默认值。
+2. **调试台一键云同步、拉取与本地导出**：
    - 在调试面板顶部设立高优先级操作工具栏：
+     - **`[☁️ 一键同步配置到云端数据库 (Firebase Sync)]`**：调用 `StorageService.saveConfigToCloud()`，以 `PUT` 方式直接将当前全部策划参数写入 Firebase `/config.json`，一键推送到全网；
+     - **`[🔄 从云端实时拉取最新配置 (Pull from Cloud)]`**：从云端实时拉取最新配置并即时热重载生效；
+     - **实时修改防抖自动上云 (Debounced Auto-Sync)**：在 Inspector 中拖拽滑块或应用推荐配置后，系统在停止操作 1.5 秒后自动在后台防抖同步至云端数据库；
      - **`[💾 直接覆盖保存 config.json 到项目目录]`**：调用原生 File System Access API（`window.showSaveFilePicker`）允许开发者在浏览器中直接选取并覆盖项目目录下的 `config.json` 文件（在不支持的浏览器中自动降级为文件下载）；
      - **`[📋 复制当前配置代码 (Copy Config JSON)]`**：一键将当前内存与 LocalStorage 中的完整最新配置格式化复制到系统剪贴板，并在控制台直接打印输出，便于快速贴回源码；
      - **`[📤 导出最新 leaderboard.json 文件]`**：一键导出排行榜数据为静态 JSON 文件。

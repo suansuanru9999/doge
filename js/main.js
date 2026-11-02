@@ -96,9 +96,18 @@
   }
 
   // Application bootstrap
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     console.log('[Dodgeball Boss Rush] Initializing game engine...');
     setupDevHotzone();
+
+    // Ensure authoritative config is loaded from static and cloud database before starting engine
+    if (window.GameConfig && typeof window.GameConfig.loadConfigAsync === 'function') {
+      try {
+        await window.GameConfig.loadConfigAsync();
+      } catch (err) {
+        console.warn('Initial config load error:', err);
+      }
+    }
 
     if (window.Game) {
       window.Game.init();

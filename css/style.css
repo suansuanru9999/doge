@@ -1723,6 +1723,30 @@ textarea#json-textarea {
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
 }
 
+.btn-quick-cloud {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25) 0%, rgba(189, 64, 255, 0.25) 100%);
+  border-color: #00f0ff;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+.btn-quick-cloud:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.45) 0%, rgba(189, 64, 255, 0.45) 100%);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.55);
+}
+
+.btn-quick-cloud-pull {
+  background: rgba(0, 255, 170, 0.12);
+  border-color: rgba(0, 255, 170, 0.6);
+  color: #00ffaa;
+}
+
+.btn-quick-cloud-pull:hover {
+  background: rgba(0, 255, 170, 0.25);
+  box-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+}
+
 /* ================= Victory Speedrun Form ================= */
 .victory-time-banner {
   margin: 12px 0 10px;

@@ -45,9 +45,11 @@
     let url = rawUrl.trim();
     if (!url) return '';
 
-    // If it's already an explicit JSON endpoint (e.g. ends with .json or has query params)
-    if (url.endsWith('.json') || url.includes('.json?')) {
-      return url;
+    // If url contains .json
+    if (url.endsWith('.json')) {
+      const parts = url.split('/');
+      parts[parts.length - 1] = `${resource}.json`;
+      return parts.join('/');
     }
 
     // Strip trailing slashes
@@ -316,6 +318,86 @@
 
       downloadBlob(jsonStr, 'config.json', 'application/json');
       return { success: true, method: 'download' };
+    },
+
+    // Load GameConfig from Firebase / Cloud Storage
+    async loadConfigFromCloud() {
+      const storageCfg = (window.GameConfig && window.GameConfig.storage) ? window.GameConfig.storage : {};
+      const cloudUrl = storageCfg.cloudSyncUrl || (window.DEFAULT_GAME_CONFIG && window.DEFAULT_GAME_CONFIG.storage && window.DEFAULT_GAME_CONFIG.storage.cloudSyncUrl);
+      const apiKey = storageCfg.apiKey;
+
+      if (!cloudUrl || !cloudUrl.trim()) return null;
+
+      try {
+        const endpoint = resolveCloudEndpoint(cloudUrl, 'config');
+        let requestUrl = endpoint;
+        const headers = {};
+        if (apiKey && apiKey.trim().length > 0) {
+          if (endpoint.includes('firebaseio.com')) {
+            requestUrl += (requestUrl.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(apiKey.trim());
+          } else {
+            headers['X-Master-Key'] = apiKey.trim();
+            headers['Authorization'] = 'Bearer ' + apiKey.trim();
+          }
+        }
+        const res = await fetch(requestUrl, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+            console.log('[StorageService] Successfully loaded config from cloud:', requestUrl);
+            return data;
+          }
+        }
+      } catch (err) {
+        console.warn('[StorageService] Failed to load config from cloud:', err);
+      }
+      return null;
+    },
+
+    // Save GameConfig to Firebase / Cloud Storage
+    async saveConfigToCloud(configObj) {
+      const cfgToSave = configObj || (window.GameConfig ? window.GameConfig.raw : null);
+      if (!cfgToSave) return { success: false, error: '未获取到配置数据' };
+
+      const storageCfg = (window.GameConfig && window.GameConfig.storage) ? window.GameConfig.storage : {};
+      const cloudUrl = storageCfg.cloudSyncUrl || (window.DEFAULT_GAME_CONFIG && window.DEFAULT_GAME_CONFIG.storage && window.DEFAULT_GAME_CONFIG.storage.cloudSyncUrl);
+      const apiKey = storageCfg.apiKey;
+
+      if (!cloudUrl || !cloudUrl.trim()) {
+        return { success: false, error: '未配置云端数据库地址 (cloudSyncUrl 为空)' };
+      }
+
+      try {
+        const endpoint = resolveCloudEndpoint(cloudUrl, 'config');
+        let requestUrl = endpoint;
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiKey && apiKey.trim().length > 0) {
+          if (endpoint.includes('firebaseio.com')) {
+            requestUrl += (requestUrl.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(apiKey.trim());
+          } else {
+            headers['X-Master-Key'] = apiKey.trim();
+            headers['Authorization'] = 'Bearer ' + apiKey.trim();
+          }
+        }
+
+        const res = await fetch(requestUrl, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(cfgToSave)
+        });
+
+        if (res.ok) {
+          console.log('[StorageService] Config successfully synced to cloud:', requestUrl);
+          return { success: true, url: requestUrl };
+        } else {
+          const errText = await res.text();
+          console.error('[StorageService] Cloud sync PUT failed:', res.status, errText);
+          return { success: false, error: `HTTP ${res.status}: ${errText}` };
+        }
+      } catch (err) {
+        console.error('[StorageService] Cloud sync PUT network error:', err);
+        return { success: false, error: err.message };
+      }
     },
 
     // Copy config JSON to clipboard
