@@ -56,6 +56,7 @@
 
       // Dash state variables
       this.dashTimer = 0;
+      this.dashInvulnerableTimer = 0;
       this.dashDirX = 0;
       this.dashDirY = -1;
       this.isInvulnerable = false;
@@ -186,6 +187,8 @@
 
       this.state = PlayerState.DASHING;
       this.dashTimer = cfg.dashDuration;
+      const iFrameDuration = (cfg.dashIFrameDuration !== undefined) ? cfg.dashIFrameDuration : (cfg.dashDuration || 0.35);
+      this.dashInvulnerableTimer = iFrameDuration;
       this.isInvulnerable = true;
 
       if (cfg.dashCooldownEnabled) {
@@ -220,11 +223,16 @@
       ball.trail = [];
       this.isPerfectHeld = isPerfect;
 
-      // Clear any whiff penalty on successful ball grab
+      // Clear any whiff penalty and dash state on successful ball grab
       this.isWhiffed = false;
       this.whiffSlowdownTimer = 0;
       this.whiffJitterTimer = 0;
       this.whiffRejectFlashTimer = 0;
+      this.dashInvulnerableTimer = 0;
+      if (!window.Game || !window.Game.isVictory) {
+        this.isInvulnerable = false;
+      }
+      this.dashGhosts = [];
 
       const preset = window.GameConfig.ball.presets[ball.presetKey] || window.GameConfig.getActiveBallPreset();
       this.overheatTimer = preset.overheatTimer || 2.5;
@@ -415,6 +423,26 @@
       const playerCfg = window.GameConfig.player;
       const realDt = rawDt || dt;
 
+      // -------------------------------------------------------------
+      // Strict Dash Invulnerability Timer (Single Source of Truth)
+      // -------------------------------------------------------------
+      // dt is scaled by global timeScale (affected by bullet time)
+      if (this.dashInvulnerableTimer > 0) {
+        this.dashInvulnerableTimer = Math.max(0, this.dashInvulnerableTimer - dt);
+        if (this.dashInvulnerableTimer > 0 && this.state === PlayerState.DASHING) {
+          this.isInvulnerable = true;
+        } else {
+          this.dashInvulnerableTimer = 0;
+          if (!window.Game || !window.Game.isVictory) {
+            this.isInvulnerable = false;
+          }
+        }
+      } else {
+        if (!window.Game || !window.Game.isVictory) {
+          this.isInvulnerable = false;
+        }
+      }
+
       // Cooldown tickers (real-time so bullet time doesn't prolong cooldown)
       if (this.catchCooldownTimer > 0) {
         this.catchCooldownTimer = Math.max(0, this.catchCooldownTimer - realDt);
@@ -529,7 +557,10 @@
 
       if (this.dashTimer <= 0) {
         this.state = PlayerState.NORMAL;
-        this.isInvulnerable = false;
+        this.dashInvulnerableTimer = 0;
+        if (!window.Game || !window.Game.isVictory) {
+          this.isInvulnerable = false;
+        }
         this.dashGhosts = [];
       }
     }
@@ -694,11 +725,15 @@
       const centerY = screenPos.y - bodyH;
 
       const isWhiffCD = (this.isWhiffed && this.catchCooldownTimer > 0);
+      const isDashInvuln = (this.isInvulnerable && this.dashInvulnerableTimer > 0 && this.state === PlayerState.DASHING);
 
-      // Glowing Aura
-      if (this.isInvulnerable) {
+      // Invincibility Flash & Translucency
+      if (isDashInvuln) {
+        // High-frequency fast shimmer (flash between 0.45 and 0.85 opacity)
+        const flash = Math.sin(performance.now() * 0.05);
+        ctx.globalAlpha = (flash > 0) ? 0.45 : 0.85;
         ctx.shadowColor = '#ffcc00';
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 18;
       } else if (isWhiffCD) {
         ctx.shadowColor = (this.whiffRejectFlashTimer > 0) ? '#ff5577' : '#ff1744';
         ctx.shadowBlur = 14;
@@ -712,8 +747,8 @@
       ctx.arc(screenPos.x, centerY, this.radius, 0, Math.PI * 2);
       if (this.flashWhiteTimer > 0) {
         ctx.fillStyle = '#ffffff';
-      } else if (this.isInvulnerable) {
-        ctx.fillStyle = '#ffcc00';
+      } else if (isDashInvuln) {
+        ctx.fillStyle = '#ffdd44';
       } else if (isWhiffCD) {
         // Darkened / grey-red tint during whiff CD
         ctx.fillStyle = (this.whiffRejectFlashTimer > 0) ? '#ff6688' : '#882233';
@@ -727,6 +762,8 @@
       ctx.arc(screenPos.x, centerY + bodyH * 0.6, this.radius * 0.85, 0, Math.PI * 2);
       if (this.flashWhiteTimer > 0) {
         ctx.fillStyle = '#ffffff';
+      } else if (isDashInvuln) {
+        ctx.fillStyle = '#ccaa22';
       } else if (isWhiffCD) {
         ctx.fillStyle = '#44111a';
       } else {

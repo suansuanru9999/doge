@@ -590,6 +590,13 @@ $$\text{autoScale} = \min\left(1.0, \; \min\left(\frac{W_{\text{screen}}}{W_{\te
      - **P2**：40% 白球、35% 紫球、25% 红球；
      - **P3**：35% 白球、35% 紫球、30% 红球；
    - 确保全阶段玩家始终有白球与紫球作为反击弹药，同时必须在密集弹幕中精准分辨红球并施展闪避穿透。
+5. **闪避无敌帧生命周期状态机与单真理源治理 (Dash I-Frame Lifecycle & Single Source of Truth)**：
+   - **独立倒计时驱动**：严禁通过零散回调开关无敌；引入专用计时器 `dashInvulnerableTimer = config.dashIFrameDuration`（默认 `0.35s`）；
+   - **每帧强制自检与状态解绑防呆**：
+     - 主循环及 Player 每帧执行 `dashInvulnerableTimer -= dt`；
+     - 只要 `dashInvulnerableTimer <= 0` 或玩家脱离 `DASHING` 状态（如闪避途中接球进入蓄力 `HOLDING_AIM`、受击、重置等），系统**无条件强制将 `player.isInvulnerable = false`**，彻底杜绝永久无敌漏洞；
+   - **视觉高频闪烁同步 (Invincibility Flash)**：仅当 `dashInvulnerableTimer > 0 && state === DASHING` 时本体呈现 0.45~0.85 快速虚化闪烁与金光，归零后瞬间 100% 恢复不透明，视觉表现与物理判定完全同步。
+
 
 
 

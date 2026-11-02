@@ -597,6 +597,14 @@
       // 6. Update Player (including physical obstacle collision push-out)
       this.player.update(dt, rawDt, this.input.moveVector, arenaCfg, this.arena.obstacles);
 
+      // Single Source of Truth Safety Guard: Ensure player invulnerability strictly clears if not in active Dash I-Frame
+      if (this.player && !this.isVictory) {
+        if (this.player.state !== window.PlayerState.DASHING || this.player.dashInvulnerableTimer <= 0) {
+          this.player.dashInvulnerableTimer = 0;
+          this.player.isInvulnerable = false;
+        }
+      }
+
       // 7. Update Boss (Frozen if Boss defeated / Victory)
       if (!this.isVictory && this.boss.alive) {
         this.boss.update(dt, this.player, arenaCfg);
@@ -681,7 +689,7 @@
         }
 
         // Case B: Player is DASHING with I-frames
-        if (player.state === window.PlayerState.DASHING && player.isInvulnerable) {
+        if (player.state === window.PlayerState.DASHING && player.isInvulnerable && player.dashInvulnerableTimer > 0) {
           // Dash-Catch Dynamic: Both Catch and Dash can catch catchable balls (white/purple)!
           if (ball.canDirectCatch && !ball.isMinion && dist <= 50) {
             player.grabBall(ball, true); // Dashing into catchable ball counts as parry catch!

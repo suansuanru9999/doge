@@ -136,7 +136,7 @@
       dashCooldown: 1.0,  // seconds
       dashDistance: 190,  // pixels
       dashDuration: 0.22, // seconds
-      dashIFrameDuration: 0.22, // invulnerability duration
+      dashIFrameDuration: 0.35, // invulnerability duration (seconds)
       perfectWindow: 0.12, // 120ms Perfect Parry window
       goodWindow: 0.25,    // 250ms Good Catch window
       bulletTimeScale: 0.15, // 0.15x slow motion

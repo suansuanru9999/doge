@@ -12,7 +12,7 @@
     "dashCooldown": 1.0,
     "dashDistance": 190,
     "dashDuration": 0.22,
-    "dashIFrameDuration": 0.22,
+    "dashIFrameDuration": 0.35,
     "perfectWindow": 0.12,
     "goodWindow": 0.25,
     "bulletTimeScale": 0.15,
