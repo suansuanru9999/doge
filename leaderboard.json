@@ -1,0 +1,82 @@
+[
+  {
+    "id": "rec_01",
+    "name": "CYBER_ACE",
+    "timeMs": 48320,
+    "timeFormatted": "00:48.32",
+    "date": "2026-10-30",
+    "combo": 32
+  },
+  {
+    "id": "rec_02",
+    "name": "PARRY_GOD",
+    "timeMs": 54150,
+    "timeFormatted": "00:54.15",
+    "date": "2026-10-31",
+    "combo": 28
+  },
+  {
+    "id": "rec_03",
+    "name": "BULLET_DANCER",
+    "timeMs": 62800,
+    "timeFormatted": "01:02.80",
+    "date": "2026-11-01",
+    "combo": 25
+  },
+  {
+    "id": "rec_04",
+    "name": "GLITCH_SLAYER",
+    "timeMs": 71450,
+    "timeFormatted": "01:11.45",
+    "date": "2026-11-01",
+    "combo": 22
+  },
+  {
+    "id": "rec_05",
+    "name": "MATRIX_RUNNER",
+    "timeMs": 78900,
+    "timeFormatted": "01:18.90",
+    "date": "2026-11-01",
+    "combo": 20
+  },
+  {
+    "id": "rec_06",
+    "name": "ECHO_STRIKE",
+    "timeMs": 85200,
+    "timeFormatted": "01:25.20",
+    "date": "2026-11-02",
+    "combo": 19
+  },
+  {
+    "id": "rec_07",
+    "name": "REFLEX_007",
+    "timeMs": 94600,
+    "timeFormatted": "01:34.60",
+    "date": "2026-11-02",
+    "combo": 17
+  },
+  {
+    "id": "rec_08",
+    "name": "VIPER_CORE",
+    "timeMs": 102100,
+    "timeFormatted": "01:42.10",
+    "date": "2026-11-02",
+    "combo": 15
+  },
+  {
+    "id": "rec_09",
+    "name": "ZERO_LATENCY",
+    "timeMs": 113750,
+    "timeFormatted": "01:53.75",
+    "date": "2026-11-02",
+    "combo": 14
+  },
+  {
+    "id": "rec_10",
+    "name": "NEON_SHIELD",
+    "timeMs": 128500,
+    "timeFormatted": "02:08.50",
+    "date": "2026-11-02",
+    "combo": 12
+  }
+]

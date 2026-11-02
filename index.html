@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Project: Dodgeball Boss Rush (弹反躲避球 Boss 战 MVP)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app-container">
+
+    <!-- Invisible Developer Mode 3-Click Hotzone (Top-Left 80x80px) -->
+    <div id="dev-mode-hotzone" class="dev-mode-hotzone" title="Developer Hotzone"></div>
+
+    <!-- Dev Mode Status Floating Toast Notification -->
+    <div id="dev-mode-toast" class="dev-mode-toast"></div>
+
+    <!-- Canvas Layer -->
+    <main id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- In-Game HUD -->
+      <div id="game-hud">
+
+        <!-- Speedrun Battle Realtime Timer - Top Center -->
+        <div id="battle-timer-hud" class="battle-timer-hud" title="速通实时耗时">
+          <span class="timer-icon">⏱️</span>
+          <span id="battle-timer-display" class="timer-digits">00:00.00</span>
+        </div>
+
+        <!-- Leaderboard Access Button - Top Right -->
+        <button id="btn-open-leaderboard" class="btn-open-leaderboard" title="查看速通排行榜 TOP 10">
+          <span>🏆 速通榜</span>
+        </button>
+
+        <!-- Orientation Switcher Button (Dev Element: Hidden by default) -->
+        <button id="btn-orientation-toggle" class="btn-orientation-toggle dev-element dev-hidden" title="强制横屏/自适应切换">
+          <span>🔄 横屏显示</span>
+        </button>
+
+        <!-- Audio Status Pill (Dev Element: Hidden by default) -->
+        <button id="btn-audio-status" class="btn-audio-status suspended dev-element dev-hidden" title="点击可测试并激活 Web Audio 引擎">
+          <span class="status-dot"></span>
+          <span class="status-text">Audio: Unlock</span>
+        </button>
+
+        <!-- Boss HP Bar & Phase - Top Center -->
+        <div class="boss-hud-container">
+          <div class="boss-title-row">
+            <div class="boss-name">
+              <span>MOM'S HEART (以撒妈心核心)</span>
+              <span id="boss-phase-badge" class="boss-phase-badge">PHASE 1</span>
+            </div>
+            <div id="boss-hp-text" class="boss-hp-text">600 / 600 (100%)</div>
+          </div>
+          <div class="boss-hp-bar-bg">
+            <div id="boss-hp-fill" class="boss-hp-bar-fill"></div>
+            <div class="boss-hp-notches">
+              <div id="notch-phase-2" class="phase-notch" style="left: 70%;" title="Phase 2 (70%)"></div>
+              <div id="notch-phase-3" class="phase-notch" style="left: 30%;" title="Phase 3 (30%)"></div>
+            </div>
+          </div>
+          <div id="boss-status-subtext" class="boss-status-subtext" style="display: none;"></div>
+        </div>
+
+        <!-- Combo & Damage Multiplier - Top Left -->
+        <div class="combo-hud-container">
+          <div id="combo-count" class="combo-count">x0</div>
+          <div id="combo-multiplier" class="combo-multiplier">100% DMG</div>
+          <div class="combo-timer-bar">
+            <div id="combo-timer-fill" class="combo-timer-fill"></div>
+          </div>
+        </div>
+
+        <!-- Bullet Time Banner - Center Top -->
+        <div id="bullet-time-banner" class="bullet-time-banner">
+          ⚡ BULLET TIME (子弹时间) ⚡
+        </div>
+
+        <!-- Pause Status Banner - Center -->
+        <div id="pause-overlay-banner" class="pause-overlay-banner">
+          ⏸️ GAME PAUSED (策划调试暂停中)
+        </div>
+
+        <!-- Player HP & Cooldowns - Bottom Left -->
+        <div class="player-hud-container">
+          <div class="player-hp-section">
+            <div class="player-hp-label">PLAYER HP</div>
+            <div class="player-hp-bar-bg">
+              <div id="player-hp-fill" class="player-hp-bar-fill"></div>
+            </div>
+            <div id="player-hp-text" style="font-size: 10px; color: #8b949e; font-family: monospace;">100 / 100 (100%)</div>
+          </div>
+
+          <div class="cooldown-dials">
+            <!-- Catch Cooldown Radial Dial -->
+            <div class="cd-dial-wrapper" title="接球/弹反 (LMB / 鼠标左键)">
+              <svg class="cd-dial-svg" viewBox="0 0 44 44">
+                <circle class="cd-dial-bg" cx="22" cy="22" r="18"></circle>
+                <circle id="cd-catch-progress" class="cd-dial-progress" cx="22" cy="22" r="18"></circle>
+              </svg>
+              <div class="cd-dial-inner">
+                <span class="cd-action-name">CATCH</span>
+                <span class="cd-key-badge">LMB</span>
+              </div>
+            </div>
+
+            <!-- Dash Cooldown Radial Dial -->
+            <div class="cd-dash-wrapper cd-dial-wrapper" title="闪避冲刺 (RMB / 鼠标右键)">
+              <svg class="cd-dial-svg" viewBox="0 0 44 44">
+                <circle class="cd-dial-bg" cx="22" cy="22" r="18"></circle>
+                <circle id="cd-dash-progress" class="cd-dial-progress" cx="22" cy="22" r="18" style="stroke: #ff9900;"></circle>
+              </svg>
+              <div class="cd-dial-inner">
+                <span class="cd-action-name" style="color: #ff9900;">DASH</span>
+                <span class="cd-key-badge">RMB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right-Center Arcade Judgment Banner (PERFECT / GOOD) -->
+        <div id="arcade-judgment-banner" class="arcade-judgment-banner">
+          <div id="judgment-title" class="judgment-title perfect">PERFECT PARRY!</div>
+          <div id="judgment-sub" class="judgment-sub">DAMAGE MULTIPLIER x2.0</div>
+        </div>
+
+        <!-- Combat Instruction Overlay - Bottom Right -->
+        <div class="combat-tip-overlay">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 360° 移动角色</div>
+          <div><kbd>LMB 左键</kbd> 弹反飞球 / 拾取地面积分球</div>
+          <div><kbd>按住左键反向拖拽</kbd> 蓄力瞄准，松手向 Boss 射出</div>
+          <div><kbd>RMB 右键</kbd> 极限闪避 (触发魔女时间)</div>
+          <div><kbd>Tab</kbd> 展开/收起策划实时调试台</div>
+        </div>
+
+      </div>
+
+      <!-- Mobile Virtual Touch Overlay -->
+      <div id="touch-controls">
+        <!-- Left Half Screen Touch Region for Dynamic Floating Joystick -->
+        <div id="joystick-touch-region" class="joystick-touch-region"></div>
+
+        <!-- Virtual Joystick Base & Thumb -->
+        <div id="joystick-zone" class="virtual-joystick-zone">
+          <div id="joystick-thumb" class="joystick-thumb"></div>
+        </div>
+
+        <!-- Right Dual Action Buttons -->
+        <div class="virtual-action-zone">
+          <div id="touch-btn-dash" class="touch-action-btn btn-dash">
+            <span>DASH</span>
+            <span class="touch-btn-sub">闪避</span>
+          </div>
+          <div id="touch-btn-catch" class="touch-action-btn btn-catch">
+            <span>CATCH</span>
+            <span class="touch-btn-sub">接球/射击</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Floating Design Inspector Toggle Button (Dev Element: Hidden by default) -->
+    <button id="inspector-toggle-btn" class="inspector-toggle-btn dev-element dev-hidden" title="点击或按 Tab 键展开/折叠">
+      <span class="gear-icon">⚙️</span>
+      <span class="btn-text">策划实时调试台</span>
+    </button>
+
+    <!-- Design Inspector Sidebar Panel (Dev Element: Hidden by default) -->
+    <aside id="inspector-panel" class="collapsed dev-element dev-hidden">
+      <div class="inspector-header">
+        <div class="inspector-title">
+          <span>DESIGN INSPECTOR</span>
+          <span class="badge">LIVE V1.0</span>
+        </div>
+        <div class="inspector-actions-top">
+          <button id="inspector-pause-btn" class="btn-icon" title="暂停/继续游戏进行">⏸️ 暂停</button>
+          <button id="inspector-close-btn" class="btn-icon btn-close-resume" title="收起面板并继续战斗">✕ 关闭并继续</button>
+        </div>
+      </div>
+
+      <!-- High-Priority Quick File Action Bar -->
+      <div class="inspector-quick-actions">
+        <button id="btn-save-config-file" class="btn-quick-action" title="调用系统文件选择器直接覆盖保存 config.json，或触发下载">
+          💾 直接覆盖保存 config.json 到项目目录
+        </button>
+        <button id="btn-copy-config-json" class="btn-quick-action" title="复制当前完整配置 JSON 到剪贴板并打印在控制台">
+          📋 复制当前配置代码 (Copy Config JSON)
+        </button>
+        <button id="btn-export-leaderboard-file" class="btn-quick-action btn-quick-leaderboard" title="导出全服速通排行榜 leaderboard.json 文件">
+          📤 导出最新 leaderboard.json 文件
+        </button>
+      </div>
+
+      <!-- Inspector Tabs -->
+      <nav class="inspector-tabs">
+        <button class="tab-btn active" data-tab="tab-player">🎮 控制器 A (玩家/连击)</button>
+        <button class="tab-btn" data-tab="tab-ball">⚽ 控制器 B (球体属性)</button>
+        <button class="tab-btn" data-tab="tab-arena">🏟️ 控制器 C (场地/障碍)</button>
+        <button class="tab-btn" data-tab="tab-boss">👿 控制器 D (Boss/阶段)</button>
+        <button class="tab-btn" data-tab="tab-audio">🔊 控制器 E (音效/合成器)</button>
+      </nav>
+
+      <!-- Tab Content Area -->
+      <div id="inspector-body" class="inspector-body">
+        <!-- Dynamically populated by inspector.js -->
+      </div>
+
+      <!-- Inspector Footer -->
+      <div class="inspector-footer">
+        <div id="inspector-autosave-tip" style="font-size: 11px; color: #00ffaa; text-align: center; margin-bottom: 4px; opacity: 0.85;">💾 参数已实时自动保存到本地 (Auto-Saved)</div>
+        <button id="btn-export-json" class="btn-footer">💾 导出配置 JSON</button>
+        <button id="btn-import-json" class="btn-footer">📂 导入配置 JSON</button>
+        <button id="btn-reset-params" class="btn-footer btn-reset">🔄 恢复默认策划参数</button>
+      </div>
+    </aside>
+
+    <!-- JSON Import / Export Modal -->
+    <div id="json-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span>策划配置 JSON 导入 / 导出</span>
+          <button id="modal-close-btn" class="btn-icon">✕</button>
+        </div>
+        <div class="modal-body">
+          <textarea id="json-textarea" spellcheck="false" placeholder="在此粘贴 GameConfig JSON 格式配置..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="modal-copy-btn" class="btn-footer" style="display: none;">复制到剪贴板</button>
+          <button id="modal-apply-btn" class="btn-footer" style="display: none; background: rgba(0, 229, 255, 0.2); border-color: #00e5ff; color: #fff;">确认应用此配置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory / Defeat Modal -->
+    <div id="game-result-modal">
+      <div class="result-card">
+        <div id="result-title" class="result-title">VICTORY</div>
+        <div id="result-stats" class="result-stats"></div>
+        <button id="btn-restart-game" class="btn-restart">再次挑战 (PLAY AGAIN)</button>
+      </div>
+    </div>
+
+    <!-- Speedrun Leaderboard TOP 10 Modal -->
+    <div id="leaderboard-modal">
+      <div class="leaderboard-card">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">⚡ 速通排行榜 TOP 10</div>
+          <button id="btn-close-leaderboard" class="btn-icon" title="关闭">✕</button>
+        </div>
+        <div class="leaderboard-body">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th style="width: 18%;">排名</th>
+                <th style="width: 28%;">玩家代号</th>
+                <th style="width: 24%;">通关用时</th>
+                <th style="width: 15%;">连击</th>
+                <th style="width: 15%;">日期</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-table-body">
+              <!-- Dynamically populated by game.js -->
+            </tbody>
+          </table>
+        </div>
+        <div class="leaderboard-footer">
+          <button id="btn-leaderboard-restart" class="btn-footer btn-restart">🔄 再来一局 (PLAY AGAIN)</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts Loaded in Order -->
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/ball.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/boss.js"></script>
+  <script src="js/arena.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/inspector.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
