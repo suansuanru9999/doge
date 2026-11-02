@@ -265,10 +265,20 @@
       // Show Right-Center Arcade Judgment HUD Banner (replaces overhead text)
       if (window.Game && window.Game.showArcadeJudgment) {
         const comboMult = window.Game.getCurrentComboMultiplier ? window.Game.getCurrentComboMultiplier() : 1.0;
-        const subText = isPerfect ?
+        const isPurple = (ball.presetKey === 'preset3');
+        const throwMult = isPurple ? 2.0 : 1.0;
+        const totalMult = comboMult * (isPerfect ? playerCfg.perfectThrowDamageMult : 1.0) * throwMult;
+
+        let title = isPerfect ? 'PERFECT PARRY!' : 'GOOD CATCH!';
+        let subText = isPerfect ?
           `DAMAGE MULTIPLIER x${(comboMult * playerCfg.perfectThrowDamageMult).toFixed(1)}` :
           `COMBO MULTIPLIER x${comboMult.toFixed(1)}`;
-        window.Game.showArcadeJudgment(isPerfect ? 'PERFECT PARRY!' : 'GOOD CATCH!', subText, isPerfect);
+
+        if (isPurple) {
+          title = 'PURPLE PARRY! x2.0';
+          subText = `HIGH-VOLTAGE DOUBLE DMG x${totalMult.toFixed(1)}`;
+        }
+        window.Game.showArcadeJudgment(title, subText, isPerfect || isPurple);
       }
     }
 

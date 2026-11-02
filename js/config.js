@@ -11,7 +11,7 @@
   // Preset definitions for Ball Properties
   const BALL_PRESETS = {
     preset1: {
-      name: '标准白球 (Balanced)',
+      name: '标准白球 (Normal Core Ball)',
       speed: 380,
       playerThrowSpeedMultiplier: 1.5,
       radius: 14,
@@ -20,6 +20,8 @@
       sineFrequency: 6.0,
       sineAmplitude: 40,
       canDirectCatch: true,
+      catchWindowMultiplier: 1.0,
+      throwDamageMultiplier: 1.0,
       overheatExplodeEnabled: true,
       overheatTimer: 2.5,
       boundaryMode: 'bounce', // pass | bounce | explode
@@ -36,15 +38,17 @@
       glowColor: '#00f0ff'
     },
     preset2: {
-      name: '重型红球 (Heavy & Explosive)',
-      speed: 280,
+      name: '重型红球 (Explosive Uncatchable)',
+      speed: 320,
       playerThrowSpeedMultiplier: 1.3,
-      radius: 20,
-      baseDamage: 50,
+      radius: 18,
+      baseDamage: 45,
       trajectoryType: 'straight',
       sineFrequency: 4.0,
       sineAmplitude: 30,
-      canDirectCatch: false, // Cannot directly catch in midair! Must dodge & pick up after landing!
+      canDirectCatch: false, // 严格不可接！触碰受罚，必须闪避无敌穿透
+      catchWindowMultiplier: 0.0,
+      throwDamageMultiplier: 1.0,
       overheatExplodeEnabled: true,
       overheatTimer: 2.0,
       boundaryMode: 'explode', // explodes on wall contact!
@@ -57,19 +61,21 @@
       reboundAngleVariance: 45,
       reboundDistance: 170,
       reboundArcHeight: 80,
-      color: '#ff3344',
-      glowColor: '#ff1122'
+      color: '#ff2233',
+      glowColor: '#ff0033'
     },
     preset3: {
-      name: '弧线紫球 (Curve Sine Wave)',
-      speed: 430,
+      name: '强袭紫球 (High-Damage Purple Ball)',
+      speed: 420,
       playerThrowSpeedMultiplier: 1.6,
-      radius: 12,
-      baseDamage: 30,
+      radius: 13,
+      baseDamage: 50, // 高额伤害 (2.0x baseDamage)
       trajectoryType: 'sine',
       sineFrequency: 7.0,
-      sineAmplitude: 50,
+      sineAmplitude: 45,
       canDirectCatch: true,
+      catchWindowMultiplier: 0.75, // 窄判定窗口 (75% of normal window)
+      throwDamageMultiplier: 2.0, // 玩家反弹投掷双倍伤害 (2.0x)
       overheatExplodeEnabled: true,
       overheatTimer: 2.5,
       boundaryMode: 'bounce',
@@ -236,7 +242,7 @@
         fanCount: 5,
         fanSpreadAngle: 75,
         ringCount: 10,
-        assignedBallPreset: 'preset2'
+        assignedBallPreset: 'mixed'
       }
     },
 

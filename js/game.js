@@ -72,9 +72,16 @@
       // Inspector panel
       this.inspector = new window.DesignInspector();
 
+      // Tutorial Modal state
+      this.isTutorialOpen = false;
+
       // Game state
       this.isRunning = true;
       this.lastTime = performance.now();
+
+      // Pop tutorial modal on startup (game awaits player confirmation)
+      this.openTutorialModal();
+
       requestAnimationFrame(this.loop.bind(this));
     }
 
@@ -93,7 +100,6 @@
         comboCount: document.getElementById('combo-count'),
         comboMultiplier: document.getElementById('combo-multiplier'),
         comboTimerFill: document.getElementById('combo-timer-fill'),
-        bulletTimeBanner: document.getElementById('bullet-time-banner'),
         resultModal: document.getElementById('game-result-modal'),
         resultTitle: document.getElementById('result-title'),
         resultStats: document.getElementById('result-stats'),
@@ -103,8 +109,19 @@
         leaderboardModal: document.getElementById('leaderboard-modal'),
         btnCloseLeaderboard: document.getElementById('btn-close-leaderboard'),
         btnLeaderboardRestart: document.getElementById('btn-leaderboard-restart'),
-        leaderboardTableBody: document.getElementById('leaderboard-table-body')
+        leaderboardTableBody: document.getElementById('leaderboard-table-body'),
+        tutorialModal: document.getElementById('tutorial-modal'),
+        btnStartGame: document.getElementById('btn-start-game')
       };
+
+      if (this.hud.btnStartGame) {
+        const startFight = (e) => {
+          if (e) e.stopPropagation();
+          this.closeTutorialModal();
+        };
+        this.hud.btnStartGame.addEventListener('click', startFight);
+        this.hud.btnStartGame.addEventListener('touchend', startFight, { passive: false });
+      }
 
       if (this.hud.btnRestart) {
         const restart = (e) => {
@@ -185,9 +202,29 @@
       if (this.hud.leaderboardModal) {
         this.hud.leaderboardModal.classList.remove('open');
       }
+      if (this.hud.tutorialModal) {
+        this.hud.tutorialModal.classList.remove('open');
+      }
+      this.isTutorialOpen = false;
 
       this.isRunning = true;
       this.lastTime = performance.now();
+    }
+
+    openTutorialModal() {
+      if (this.hud && this.hud.tutorialModal) {
+        this.hud.tutorialModal.classList.add('open');
+      }
+      this.isTutorialOpen = true;
+    }
+
+    closeTutorialModal() {
+      if (this.hud && this.hud.tutorialModal) {
+        this.hud.tutorialModal.classList.remove('open');
+      }
+      this.isTutorialOpen = false;
+      this.lastTime = performance.now();
+      window.SoundFX.playDash();
     }
 
     updateBattleTimerHUD(overrideText) {
@@ -259,7 +296,7 @@
         this.hud.resultTitle.className = 'result-title defeat';
         this.hud.resultTitle.textContent = 'DEFEAT / 战败';
         this.hud.resultStats.innerHTML = `
-          Boss 剩余血量: ${Math.round((this.boss.hp / this.boss.maxHp) * 100)}%<br>
+          BIGBOSS 剩余血量: ${Math.round((this.boss.hp / this.boss.maxHp) * 100)}%<br>
           最高连击数: ${this.comboCount} Hits
         `;
         this.hud.resultModal.classList.add('open');
@@ -317,7 +354,7 @@
       window.ParticleSystem.spawnShockwave(this.boss.x, this.boss.y, 180, 0.55, '#ffcc00');
       window.ParticleSystem.spawnSparks(this.boss.x, this.boss.y, 50, '#ff3366', 2.0);
       window.ParticleSystem.spawnSparks(this.boss.x, this.boss.y, 45, '#ffcc00', 1.8);
-      window.ParticleSystem.spawnDamageText(this.boss.x, this.boss.y - 20, 'BOSS SLAIN!', true, '#ffcc00');
+      window.ParticleSystem.spawnDamageText(this.boss.x, this.boss.y - 20, 'BIGBOSS SLAIN!', true, '#ffcc00');
 
       // 4. Dramatic 0.5s hitstop slow-motion freeze frame
       this.triggerHitstop(0.5);
@@ -329,7 +366,7 @@
         if (this.hud.resultModal && this.hud.resultTitle && this.hud.resultStats) {
           const lastName = window.StorageService ? window.StorageService.getLastPlayerName() : 'CYBER_PLAYER';
           this.hud.resultTitle.className = 'result-title victory';
-          this.hud.resultTitle.textContent = '🏆 VICTORY! 挑战成功';
+          this.hud.resultTitle.textContent = '🏆 VICTORY! BIGBOSS 击破达成';
           this.hud.resultStats.innerHTML = `
             <div class="victory-time-banner">
               <span class="victory-time-label">⏱️ 速通耗时:</span>
@@ -433,9 +470,6 @@
     triggerBulletTime(duration) {
       this.bulletTimeTimer = duration;
       window.SoundFX.setBulletTime(true);
-      if (this.hud.bulletTimeBanner) {
-        this.hud.bulletTimeBanner.classList.add('active');
-      }
     }
 
     triggerHitstop(duration) {
@@ -482,8 +516,8 @@
     }
 
     update(rawDt) {
-      // 0. Game paused check (e.g. during Inspector open)
-      if (this.isPaused) {
+      // 0. Game paused check (e.g. during Inspector open or Tutorial modal)
+      if (this.isPaused || this.isTutorialOpen) {
         this.updateHUD();
         return;
       }
@@ -501,9 +535,6 @@
         this.timeScale = pCfg.bulletTimeScale;
         if (this.bulletTimeTimer <= 0) {
           window.SoundFX.setBulletTime(false);
-          if (this.hud.bulletTimeBanner) {
-            this.hud.bulletTimeBanner.classList.remove('active');
-          }
         }
       } else {
         this.timeScale = 1.0;
@@ -580,26 +611,59 @@
         // Case A: Player is in active CATCHING window
         if (player.state === window.PlayerState.CATCHING && dist <= 56) {
           if (!ball.canDirectCatch) {
-            // Unblockable ball! Show text & let player take damage if too close
-            window.ParticleSystem.spawnDamageText(player.x, player.y, 'UNBLOCKABLE / 无法接球!', true, '#ff3344');
-          } else {
-            // Determine Perfect Parry vs Good Catch based on remaining catchTimer
-            // perfectWindow is the initial slice of the catchTimer
-            const elapsedCatch = pCfg.goodWindow - player.catchTimer;
-            const isPerfect = (elapsedCatch <= pCfg.perfectWindow);
+            // Strict Rule 1: Attempting to catch forbidden red ball / uncatchable bullet triggers immediate failure penalty!
+            const penaltyDamage = ball.baseDamage || 45;
+            player.takeDamage(penaltyDamage);
+            window.ParticleSystem.spawnDamageText(player.x, player.y - 18, '触碰违禁红球 / FORBIDDEN RED BALL!', true, '#ff1133');
+            window.ParticleSystem.spawnShockwave(player.x, player.y, 70, 0.35, '#ff2233');
+            window.ParticleSystem.spawnSparks(player.x, player.y, 22, '#ff1133', 1.5);
+            window.SoundFX.playExplosion();
+            this.triggerScreenShake(0.8, 0.25);
 
-            player.grabBall(ball, isPerfect);
+            // Knock player back slightly away from red ball
+            const pushDir = window.Physics.normalize(player.x - ball.x, player.y - ball.y);
+            player.x += pushDir.x * 24;
+            player.y += pushDir.y * 24;
+            player.state = window.PlayerState.NORMAL;
+
+            // Destroy the dangerous ball on triggered explosion
+            ball.alive = false;
             this.balls.splice(i, 1);
             return;
+          } else {
+            // Determine Perfect Parry vs Good Catch based on ball's specific catchWindowMultiplier
+            const preset = ball.preset || (window.GameConfig.ball.presets && window.GameConfig.ball.presets[ball.presetKey]) || {};
+            const windowMult = (preset.catchWindowMultiplier !== undefined) ? preset.catchWindowMultiplier : 1.0;
+            const effectiveGoodWindow = pCfg.goodWindow * windowMult;
+            const effectivePerfectWindow = pCfg.perfectWindow * windowMult;
+
+            const elapsedCatch = pCfg.goodWindow - player.catchTimer;
+
+            if (elapsedCatch <= effectiveGoodWindow) {
+              const isPerfect = (elapsedCatch <= effectivePerfectWindow);
+              player.grabBall(ball, isPerfect);
+              this.balls.splice(i, 1);
+              return;
+            } else {
+              // Missed tighter catch window for high-risk balls
+              window.ParticleSystem.spawnDamageText(player.x, player.y - 14, 'TOO LATE / 判定过窄!', true, '#bd40ff');
+            }
           }
         }
 
         // Case B: Player is DASHING with I-frames
         if (player.state === window.PlayerState.DASHING && player.isInvulnerable) {
-          // If ball is very close during dash start, trigger Witch Time!
+          // Dash-Catch Dynamic: Both Catch and Dash can catch catchable balls (white/purple)!
+          if (ball.canDirectCatch && !ball.isMinion && dist <= 50) {
+            player.grabBall(ball, true); // Dashing into catchable ball counts as parry catch!
+            this.balls.splice(i, 1);
+            return;
+          }
+
+          // Rule 2: Dash I-frames safely penetrate through uncatchable red balls & minion barrages!
           if (dist <= 35 && !this.bulletTimeTimer) {
             this.triggerBulletTime(pCfg.bulletTimeDuration * 0.8);
-            window.ParticleSystem.spawnDamageText(player.x, player.y, 'WITCH TIME!', true, '#ffcc00');
+            window.ParticleSystem.spawnDamageText(player.x, player.y, 'WITCH TIME / 极限闪避!', true, '#ffcc00');
           }
           continue; // Unharmed!
         }

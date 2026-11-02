@@ -302,7 +302,7 @@
       this.moveVector.y = y;
     }
 
-    // Mobile Virtual Analog Stick (Zero-Latency Floating Joystick across Left Half of Screen)
+    // Mobile Virtual Analog Stick (Locked in bottom-left corner with 35% default opacity)
     initVirtualJoystick() {
       const touchRegion = document.getElementById('joystick-touch-region');
       const stickZone = document.getElementById('joystick-zone');
@@ -318,18 +318,18 @@
         const touch = e.changedTouches[0];
         this.touchJoystickId = touch.identifier;
 
-        const coords = this.toGameCoords(touch.clientX, touch.clientY);
-        this.touchJoystickOrigin = { x: coords.x, y: coords.y };
+        // Stick base is locked at the bottom-left corner
+        const rect = stickZone.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const centerCoords = this.toGameCoords(centerX, centerY);
+        this.touchJoystickOrigin = { x: centerCoords.x, y: centerCoords.y };
 
-        // Position joystick base centered at touch point
-        stickZone.style.left = `${coords.x}px`;
-        stickZone.style.top = `${coords.y}px`;
         stickZone.classList.add('active');
-
-        // Remove any transition for 0ms immediate response
         thumb.classList.remove('resetting');
-        thumb.style.transform = 'translate(0px, 0px)';
-        this.moveVector = { x: 0, y: 0 };
+
+        const coords = this.toGameCoords(touch.clientX, touch.clientY);
+        this.handleJoystickMove(coords.x, coords.y, maxRadius, thumb);
       }, { passive: false });
 
       window.addEventListener('touchmove', (e) => {

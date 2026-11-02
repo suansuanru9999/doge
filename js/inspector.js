@@ -707,6 +707,12 @@
       this.addToggle(g2, '允许途中直接接球 (Can Direct Catch)', preset.canDirectCatch, checked => {
         preset.canDirectCatch = checked;
       });
+      this.addSlider(g2, '接球判定窗口缩放 (Catch Window Mult)', preset.catchWindowMultiplier !== undefined ? preset.catchWindowMultiplier : 1.0, 0.2, 2.0, 0.05, val => {
+        preset.catchWindowMultiplier = val;
+      }, 'x');
+      this.addSlider(g2, '反弹投掷伤害倍率 (Throw Damage Mult)', preset.throwDamageMultiplier !== undefined ? preset.throwDamageMultiplier : 1.0, 1.0, 4.0, 0.1, val => {
+        preset.throwDamageMultiplier = val;
+      }, 'x');
       this.addToggle(g2, '手持自爆开关 (Overheat Explode)', preset.overheatExplodeEnabled, checked => {
         preset.overheatExplodeEnabled = checked;
       });

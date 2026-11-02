@@ -155,7 +155,8 @@
       this.perpDirX = -dirY;
       this.perpDirY = dirX;
 
-      this.damageMultiplier = comboMultiplier * (isPerfect ? playerCfg.perfectThrowDamageMult : 1.0);
+      const presetDamageMult = (preset && preset.throwDamageMultiplier !== undefined) ? preset.throwDamageMultiplier : 1.0;
+      this.damageMultiplier = comboMultiplier * (isPerfect ? playerCfg.perfectThrowDamageMult : 1.0) * presetDamageMult;
       this.state = BallState.PLAYER_FLIGHT;
       this.wallBouncesLeft = this.maxWallBounces;
       this.age = 0;
@@ -236,6 +237,11 @@
       if (this.state === BallState.ENEMY_FLIGHT || this.state === BallState.PLAYER_FLIGHT) {
         this.trail.unshift({ x: this.x, y: this.y, z: this.z, alpha: 0.8 });
         if (this.trail.length > 8) this.trail.pop();
+
+        // Distinct micro-particles for Purple High-Damage core ball
+        if (this.presetKey === 'preset3' && !this.isMinion && Math.random() < 0.28) {
+          window.ParticleSystem.spawnSparks(this.x, this.y, 1, '#e066ff', 0.6);
+        }
       }
 
       // Always decay lingering trail points regardless of state and prune dead points
@@ -620,6 +626,27 @@
         ctx.arc(screenPos.x - this.radius * 0.28, screenPos.y - this.radius * 0.28, this.radius * 0.38, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.fill();
+
+        // Specific Visual Flavor for Red (Forbidden Hazard) and Purple (High-Voltage Counter) Balls
+        if (this.presetKey === 'preset2') {
+          // Red Ball: High-frequency alert warning dashed pulse ring
+          const alertPulse = 1.0 + Math.sin(performance.now() * 0.016) * 0.28;
+          ctx.beginPath();
+          ctx.arc(screenPos.x, screenPos.y, this.radius * alertPulse * 1.35, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 34, 51, 0.9)';
+          ctx.lineWidth = 2.0;
+          ctx.setLineDash([5, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (this.presetKey === 'preset3') {
+          // Purple Ball: High-voltage electric corona micro-glow ring
+          const purplePulse = 1.0 + Math.sin(performance.now() * 0.010) * 0.22;
+          ctx.beginPath();
+          ctx.arc(screenPos.x, screenPos.y, this.radius * purplePulse * 1.25, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(224, 102, 255, 0.75)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        }
       } else {
         // Minion Hazard Bullet: subtle translucent outer ring
         ctx.strokeStyle = 'rgba(255, 80, 120, 0.6)';

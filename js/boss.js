@@ -554,8 +554,23 @@
     // Resolve specific ball preset or randomly sample from preset pool if 'mixed'
     resolvePresetKey(presetKey) {
       if (presetKey === 'mixed') {
-        const pool = ['preset1', 'preset2', 'preset3'];
-        return pool[Math.floor(Math.random() * pool.length)];
+        const r = Math.random();
+        if (this.phase === 1) {
+          // P1: 60% White Core, 25% High-Dmg Purple, 15% Hazard Red
+          if (r < 0.60) return 'preset1';
+          if (r < 0.85) return 'preset3';
+          return 'preset2';
+        } else if (this.phase === 2) {
+          // P2: 40% White Core, 35% High-Dmg Purple, 25% Hazard Red
+          if (r < 0.40) return 'preset1';
+          if (r < 0.75) return 'preset3';
+          return 'preset2';
+        } else {
+          // P3: 35% White Core, 35% High-Dmg Purple, 30% Hazard Red
+          if (r < 0.35) return 'preset1';
+          if (r < 0.70) return 'preset3';
+          return 'preset2';
+        }
       }
       return presetKey || 'preset1';
     }
@@ -624,20 +639,21 @@
           this.spawnBullet(originX, originY, Math.cos(a), Math.sin(a), resolvedKey, isMinion);
         }
       } else if (formation === 'ring') {
-        // 360 degree ring: Core Ball randomly positioned among minions
+        // 360 degree ring: 3 Core Balls randomly positioned among minions via Fisher-Yates shuffle
         const count = phaseCfg.ringCount || 12;
         const step = (Math.PI * 2) / count;
 
         let slots = [];
         if (mixMinions) {
-          const coreCount = 1;
+          // Requirement: 360° 环形弹幕的核心特殊球数量从 1 个增加到 3 个
+          const coreCount = Math.min(3, count);
           for (let i = 0; i < count; i++) {
             slots.push(i >= coreCount);
           }
           if (doShuffle) {
             this.shuffleSlots(slots);
           } else {
-            slots = [false, ...new Array(count - 1).fill(true)];
+            slots = [...new Array(coreCount).fill(false), ...new Array(count - coreCount).fill(true)];
           }
         } else {
           slots = new Array(count).fill(false);
@@ -647,7 +663,8 @@
           const a = effectiveAngle + step * i;
           const isMinion = slots[i];
           const resolvedKey = isMinion ? 'preset1' : this.resolvePresetKey(presetKey);
-          this.spawnBullet(originX, originY, Math.cos(a), Math.sin(a), resolvedKey, isMinion);
+          // Guarantee all 3 Core Balls spawn in 360 ring burst
+          this.spawnBullet(originX, originY, Math.cos(a), Math.sin(a), resolvedKey, isMinion, !isMinion);
         }
       } else if (formation === 'spiral') {
         // Rotating spiral bursts with slot shuffling
@@ -676,12 +693,12 @@
     }
 
     // Spawn a bullet into game world with active Core Ball cap enforcement
-    spawnBullet(x, y, dirX, dirY, presetKey, isMinion = false) {
+    spawnBullet(x, y, dirX, dirY, presetKey, isMinion = false, forceCore = false) {
       const bCfg = window.GameConfig.ball;
       const maxActiveCore = (bCfg && bCfg.maxActiveCoreBalls !== undefined) ? bCfg.maxActiveCoreBalls : 3;
 
-      // Downgrade Core Ball to Minion Bullet if field cap reached
-      if (!isMinion && this.getActiveCoreBallCount() >= maxActiveCore) {
+      // Downgrade Core Ball to Minion Bullet if field cap reached (unless forceCore from 360 ring burst)
+      if (!isMinion && !forceCore && this.getActiveCoreBallCount() >= maxActiveCore) {
         isMinion = true;
       }
 
