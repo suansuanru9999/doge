@@ -597,6 +597,167 @@ $$\text{autoScale} = \min\left(1.0, \; \min\left(\frac{W_{\text{screen}}}{W_{\te
      - 只要 `dashInvulnerableTimer <= 0` 或玩家脱离 `DASHING` 状态（如闪避途中接球进入蓄力 `HOLDING_AIM`、受击、重置等），系统**无条件强制将 `player.isInvulnerable = false`**，彻底杜绝永久无敌漏洞；
    - **视觉高频闪烁同步 (Invincibility Flash)**：仅当 `dashInvulnerableTimer > 0 && state === DASHING` 时本体呈现 0.45~0.85 快速虚化闪烁与金光，归零后瞬间 100% 恢复不透明，视觉表现与物理判定完全同步。
 
+---
+
+## 16. 第二关：幻影首领战斗体系与独立控制台规范 (Boss 2: PHANTOM BOSS Spec v2.0)
+
+### 16.1 架构设计与双首领隔离机制 (Independent Architecture & Dual-Boss System)
+1. **控制台隔离 (`BOSS_2_INSPECTOR` / 控制器 F)**：
+   - 为第二关首领开辟全新的独立调试面板 `BOSS_2_INSPECTOR`，配置键挂载于 `GameConfig.boss2`，与一代 BIGBOSS（`GameConfig.boss`）完全隔离；
+   - 支持完整的浏览器本地存储缓存与一键重置，双关卡配置互不污染。
+2. **多关卡动态切换与实体生命周期 (Level Boss Switching)**：
+   - 游戏支持动态首领切换（`Game.switchBoss(bossId)`）：
+     - 玩家可通过 HUD 顶部的关卡切换药丸按钮（`#btn-switch-boss`）或 Inspector 顶部的快捷动作按钮一键无缝在关卡 1（BIGBOSS）与关卡 2（PHANTOM BOSS / 幻影首领）之间切换；
+     - 切换时重置场地状态、障碍物、弹药与计时器，HUD 血条标题、阶段标记及提示文字自动同步更新。
+3. **视觉造型：双蓝发光环 (Dual Blue Halos Visual Framework)**：
+   - 继承核心几何体骨骼与赛博科技质感，在幻影首领本体周围环绕渲染**两道独立旋转的高对比度蓝色发光光环（Dual Blue Halos）**：
+     - **内光环（Inner Halo）**：较小半径（默认 `62px`），以正向角速度（默认 `+1.2 rad/s`）顺时针旋转，辅以高亮青蓝发光（`#00f0ff`）；
+     - **外光环（Outer Halo）**：较大半径（默认 `78px`），以负向角速度（默认 `-0.85 rad/s`）逆时针旋转，辅以深蓝幽浮霓虹微光（`#0088ff`）；
+     - 双环半径、转速与发光强度均在控制台中实时可调，呈现极具压迫感与科技感的双层能量力场。
+
+---
+
+### 16.2 第一阶段：隐形漂移、撞柱破隐与阶段攻击手段 (Phase 1: Stealth Drift & Pillar Reveal)
+* **阶段血量区间**：`100% ~ 70% Max HP`。
+1. **常态隐形漂移 (Stealth Drift)**：
+   - 进入战斗后，幻影首领处于常态半透明隐形状态（`isStealth = true`，不透明度 `stealthOpacity: 0.15`）；
+   - Boss 在场地内以平滑低速进行四向漂移游走（`driftSpeed: 120 px/s`），触碰竞技场边缘时发生自然反弹。
+   - **潜行保护**：在隐形漂移期间，Boss 处于无法被普通投掷直接命中的潜行保护态（`hasCollider: false`）。
+2. **撞柱破隐机制 (Pillar Collision Reveal)**：
+   - 当幻影首领在漂移过程中碰撞到竞技场内的立柱障碍物（Pillars）时，强烈的撞击震动打破隐形力场：
+     - Boss **立即停止漂移定格在原地**；
+     - 强制解除隐形，**透明度瞬间拉满恢复为 100% 实体**（`currentOpacity: 1.0`），实体碰撞箱完全激活（`hasCollider: true`）；
+     - 触发破隐视觉特效（蓝色冲击波、爆燃火花、震屏反馈与 `'REVEALED / 破隐现身!'` 战斗悬浮字）；
+     - 开启破隐受击窗口倒计时（`revealDurationOnHitPillar`，默认 `4.0s`）。
+3. **受击重隐反制 (Hit Re-stealth Counter)**：
+   - 在这 `4.0s` 现身窗口内，若玩家抓住机会用反弹球击中 Boss：
+     - Boss 正常扣除 HP 并触发受击硬直与受击音效；
+     - **受击后 Boss 立即重新遁入潜行隐形**，重新生成漂移向量并迅速漂移逃离当前点位，迫使玩家展开下一轮引诱与博弈；
+     - 若 `4.0s` 倒计时结束玩家未击中，Boss 同样自动恢复潜行并重新开始漂移。
+4. **阶段一攻击手段数据驱动控制 (P1 Emitter Controls)**：
+   - 全面接入与一代同构的发射配置：
+     - **发射源 (Emitter Source)**：`boss`（本体发射）、`walls`（四边墙壁发射）、`both`（协同发射）；
+     - **发射阵型 (Formation Type)**：`fan`（扇形散射，默认 4 颗 45°）、`single`（精准狙击）、`ring`（环形）、`spiral`（螺旋）；
+     - **发射球体预设 (Ball Preset)**：支持纯白球、红球、紫球或 `mixed` 智能混合轮换。
+
+---
+
+### 16.3 第二阶段：极速冲撞、撞墙硬直与后背反击 (Phase 2: Charge, Wall Stun & Rear Spread)
+* **阶段血量区间**：`70% ~ 30% Max HP`。
+1. **阶段转换与常态现身**：
+   - 当 HP 降至 70% 以下时，幻影首领完全抛弃潜行伪装，保持 100% 实体常驻；
+   - 激活冲撞残影拖尾（Ghost Afterimages）。
+2. **冲撞准备与极速突进 (Charge Telegraph & Charge)**：
+   - **休息与弹幕压制 (`CHARGE_REST`)**：在 `chargeDelay: 2.5s` 间歇内，Boss 正常游走并按 P2 发射波次发射常规弹幕；
+   - **瞄准预警 (`CHARGE_TELEGRAPH`)**：Boss 原地停顿 `telegraphDuration: 0.6s`，锁定玩家当前站位方向并伴随高频微光抖动；
+   - **极速冲撞 (`CHARGING`)**：Boss 以极高爆发速度（`chargeSpeed: 550 px/s`）沿瞄准直线向玩家发动冲刺；冲刺途中若撞击到未处于无敌帧的玩家，造成直接重创与击退。
+3. **撞墙眩晕硬直 (Arena Boundary Crash & Wall Stun)**：
+   - 当 Boss 极速冲撞触碰到竞技场外边缘边界（Wall Collider）时，巨大的撞击力瞬间将 Boss 震晕：
+     - 产生剧烈全屏震颤（Screen Shake 1.6）与撞击爆炸光效；
+     - Boss 陷入为期 `wallStunDuration: 3.0s` 的眩晕硬直（`p2State = 'STUNNED'`），头顶旋转眩晕星标；
+     - **核心反击窗口**：在眩晕的 `3.0s` 内，Boss 彻底丧失移动与攻击能力，处于全开放破绽受击态，玩家可肆意蓄力狂轰！
+4. **后背反向扩散弹幕 (Rear Fan Spread Counter-Fire)**：
+   - 在 Boss 撞击版边晕眩的同一瞬间，作为物理动量反冲，从 Boss 的**背部（冲撞方向的相反法线）向场内扇形喷射反击弹幕**（默认 `5` 颗、`75°` 夹角）；
+   - 这批喷射出的弹幕直接射向场中央，不仅构成了视觉上的物理惯性反馈，更直接为正处于场中央的玩家**源源不断地送来反击弹药（白球与高伤紫球）**，让玩家立刻接球砸向陷入眩晕的 Boss！
+5. **阶段二攻击手段控制 (P2 Emitter Controls)**：
+   - 支持调整冲撞速度、间歇、预警时间、撞墙眩晕秒数、后背弹幕颗数与扇面角度，以及 P2 常态波次的发射源、阵型与球种预设。
+
+---
+
+### 16.4 第三阶段：10秒弹幕生存自爆与胜利结算 (Phase 3: Survival Hell & Self-Destruction)
+* **阶段触发条件**：`HP <= 30%`。
+1. **中上方定格与自爆充能力场 (Glide & Overload Shield)**：
+   - 当 HP 跌破 30% 门槛，首领不再进行位移，而是平稳滑行至竞技场正中上方高台（`x: 0, y: -40`）；
+   - 展开终极过载护盾（`isInvulnerable = true`，免疫所有直接伤害）。
+2. **10.0 秒终极生存倒计时 (10.0s Arcade Survival Countdown)**：
+   - 屏幕中上方赫然升起高危霓虹警示横幅（`#survival-timer-banner`）：
+     - 显示警示标志与醒目的金色街机倒计时（`#survival-countdown-digits`，从 `10.0s` 开始以 `dt` 精确递减）；
+     - 伴随高频警报光芒与呼吸边框脉冲。
+3. **狂暴过载弹幕风暴 (Overload Bullet Hell)**：
+   - 在这生死 10 秒内，幻影首领与全战场发射器进入全功率过载超频射击（`fireInterval: 0.65s`）；
+   - 密集向玩家倾泻 360° 环形弹幕、螺旋弹幕与墙壁交叉火力，玩家必须全神贯注使用摇杆走位、接球与闪避穿透存活下来。
+4. **核心过载大爆炸自爆与胜利结算 (Core Overload Self-Destruction & Victory)**：
+   - 当 10.0 秒倒计时精确归零时：
+     - 首领核心发生终极热失控，引发毁天灭地的多重冲击波大爆炸（连续火花、220px 超大青白色冲击光环）；
+     - 浮现 `'CORE OVERLOAD / 自爆破灭!'` 与 `'PHANTOM BOSS SLAIN!'` 庆祝弹字；
+     - 瞬间清空场上所有残余子弹与发射器；
+     - 触发胜利定格与欢呼音乐，定格速通时间并自动呼出排行榜提交界面！
+
+---
+
+### 16.5 幻影首领核心参数配置速查表 (Phantom Boss Default Matrix)
+
+| 模块 | 配置项 | 默认值 | 调节步长与区间 | 战术功能与作用 |
+| :--- | :--- | :--- | :--- | :--- |
+| **基础属性** | `boss2.maxHp` | 800 | 200 ~ 2500 (步长 50) | 首领最大血量上限 |
+| | `boss2.hitboxRadius` | 54 px | 20 ~ 120 px (步长 2) | 首领物理受击碰撞箱体型半径 |
+| **双蓝光环** | `boss2.halo1Radius` | 62 px | 30 ~ 140 px | 内发光环半径 |
+| | `boss2.halo1Speed` | +1.2 rad/s | -5.0 ~ 5.0 rad/s | 内光环顺时针旋转速度 |
+| | `boss2.halo2Radius` | 78 px | 40 ~ 180 px | 外发光环半径 |
+| | `boss2.halo2Speed` | -0.85 rad/s | -5.0 ~ 5.0 rad/s | 外光环逆时针旋转速度 |
+| | `boss2.haloGlowIntensity` | 1.0 | 0.2 ~ 2.5 | 霓虹发光与阴影辉光强度 |
+| **阶段 1** | `boss2.phase1.driftSpeed` | 120 px/s | 40 ~ 300 px/s | 潜行游走漂移速度 |
+| | `boss2.phase1.stealthOpacity` | 0.15 | 0.05 ~ 0.50 | 隐形状态下的残影半透明度 |
+| | `boss2.phase1.revealDurationOnHitPillar` | 4.0 s | 1.0 ~ 10.0 s | 碰撞立柱后现身受击窗口时长 |
+| | `boss2.phase1.fireInterval` | 2.5 s | 0.5 ~ 5.0 s | 弹幕发射间隔 |
+| | `boss2.phase1.formationType` | `fan` | fan / single / ring / spiral | 阶段一阵型（默认 4 发 45° 扇形） |
+| | `boss2.phase1.assignedBallPreset` | `mixed` | mixed / preset1 / 2 / 3 | 阶段一球体预设轮换 |
+| **阶段 2** | `boss2.phase2.chargeSpeed` | 550 px/s | 200 ~ 1000 px/s | 瞄准冲刺极速 |
+| | `boss2.phase2.chargeDelay` | 2.5 s | 1.0 ~ 6.0 s | 冲刺冷却间隔 |
+| | `boss2.phase2.telegraphDuration` | 0.6 s | 0.2 ~ 2.0 s | 冲刺前的锁定预警蓄力时长 |
+| | `boss2.phase2.wallStunDuration` | 3.0 s | 1.0 ~ 8.0 s | 撞击版边后眩晕硬直受击时长 |
+| | `boss2.phase2.rearFanCount` | 5 | 3 ~ 11 | 撞墙后背扩散反击弹颗数 |
+| | `boss2.phase2.rearFanSpreadAngle` | 75° | 30 ~ 140° | 撞墙后背反击扩散夹角 |
+| | `boss2.phase2.assignedBallPreset` | `preset3` | mixed / preset1 / 2 / 3 | 阶段二弹药预设（默认高伤弧线紫球） |
+| **阶段 3** | `boss2.phase3.survivalDuration` | 10.0 s | 5.0 ~ 30.0 s | 极限过载弹幕生存倒计时 |
+| | `boss2.phase3.fireInterval` | 0.65 s | 0.2 ~ 2.0 s | 狂暴弹幕波次发射间歇 |
+| | `boss2.phase3.formationType` | `ring` | ring / spiral / fan | 阶段三弹幕阵型（默认 360° 环形 18 颗） |
+| | `boss2.phase3.ringCount` | 18 | 8 ~ 36 | 环形弹幕子弹密度 |
+| | `boss2.phase3.assignedBallPreset` | `preset2` | mixed / preset1 / 2 / 3 | 阶段三弹药预设（重型爆炸红球） |
+
+---
+
+## 17. 首领选择弹窗与各 Boss 独立排行榜系统 (Boss Selection & Isolated Leaderboard System)
+
+### 17.1 主游戏流程推进设计 (Tutorial -> Boss Select -> Game Start)
+为了给新老玩家提供极其明确的关卡选择与引导体验，游戏采用环环相扣的三段式开局主流程：
+1. **第一阶段：操作指南弹窗 (Tutorial Modal)**：
+   - 网页初次加载时居中弹出，讲解核心走位、接球/反弹机制、闪避无敌帧与三色球博弈规则；
+   - 底层游戏世界全局静止等待确认。
+2. **第二阶段：选择挑战首领弹窗 (Boss Select Modal)**：
+   - 玩家点击操作指南底部的 `[⚔️ 开始战斗 / START GAME]` 按钮时，操作指南关闭，**紧接着立即呼出【选择挑战首领弹窗】（`#boss-select-modal`）**；
+   - 弹窗采用赛博科技双卡片排布（`Boss Selection Grid`），呈现两大关卡首领核心档案：
+     - **卡片 1：BIGBOSS**（关卡 1 · LEVEL 1 / 经典打铁反弹战 / 三阶段破柱护盾）；
+     - **卡片 2：PHANTOM BOSS**（关卡 2 · LEVEL 2 / 隐形漂移潜行战 / 冲撞晕眩与10秒弹幕生存）；
+   - 每个卡片下方提供两个功能明确的按钮：
+     - **`[⚔️ 挑战此 Boss]`**：立即关闭弹窗，激活对应首领实体，开局战斗！
+     - **`[📊 查看该 Boss 排行榜]`**：直接打开排行榜弹窗，并自动定位至该首领专属速通榜。
+3. **第三阶段：正式对战启动 (Battle Start)**：
+   - 确认首领后，解除底层暂停，激活 Web Audio 音效引擎，正式打响 Boss 战。
+
+---
+
+### 17.2 独立排行榜与云端隔离存储架构 (Isolated Multi-Boss Leaderboards)
+1. **云端与本地数据路径隔离**：
+   - 在 Firebase Realtime Database 及本地存储中，各大首领排行榜执行严格的物理资源隔离：
+     - **BIGBOSS 排行榜**：云端端点 `leaderboard_bigboss.json`，本地键名 `DODGEBALL_LEADERBOARD_BIGBOSS`（兼容老版本 `DODGEBALL_LEADERBOARD_V1`）；
+     - **PHANTOM BOSS 排行榜**：云端端点 `leaderboard_phantom.json`，本地键名 `DODGEBALL_LEADERBOARD_PHANTOM`；
+2. **提交与结算边界保护 (Strict Scoped Settlement)**：
+   - 当玩家击败某一关卡首领输入昵称提交成绩时，**系统严格仅将成绩写入当前击败的首领对应排行榜**；
+   - 自动按照通关耗时（`timeMs`）升序排序，严格截取全球前 10 名（`slice(0, 10)`，第 11 名及以后自动物理淘汰）；
+   - 绝不产生双关卡数据串线或覆盖问题。
+3. **排行榜弹窗多 Tab 交互切换 (Multi-Tab UI)**：
+   - 排行榜弹窗顶部提供显式切换标签页：
+     - **`[👑 BIGBOSS 速通榜]`**（`#tab-lb-bigboss`）
+     - **`[👻 PHANTOM BOSS 速通榜]`**（`#tab-lb-phantom`）
+   - 支持玩家在查看榜单时随时无缝切换两张独立榜单，实时异步加载并渲染 Top 10 名单；
+   - 排名列表高亮：
+     - 🥇 第 1 名、🥈 第 2 名、🥉 第 3 名定制专属高对比金/银/铜配色；
+     - 玩家新提交的记录展示高亮背景与 `<span class="badge-you">YOU</span>` 标志；
+   - 弹窗底部配备 `[🔄 再来一局 (PLAY AGAIN)]`，点击后立即以当前排行榜所选的 Boss 开局重玩。
+
+
+
 
 
 

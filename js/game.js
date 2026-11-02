@@ -63,8 +63,11 @@
       // Instantiate entities
       this.arena = new window.Arena();
       this.player = new window.Player();
-      this.boss = new window.Boss();
+      this.activeBossId = (window.GameConfig && window.GameConfig.activeBossId) || 'boss1';
+      this.boss = this.createBossInstance(this.activeBossId);
       this.balls = [];
+
+      this.syncBossUI();
 
       // Input layer
       this.input = new window.InputManager();
@@ -72,8 +75,10 @@
       // Inspector panel
       this.inspector = new window.DesignInspector();
 
-      // Tutorial Modal state
+      // Tutorial & Boss Select Modal states
       this.isTutorialOpen = false;
+      this.isBossSelectOpen = false;
+      this.currentLeaderboardBoss = this.activeBossId === 'boss2' ? 'phantom' : 'bigboss';
 
       // Game state
       this.isRunning = true;
@@ -112,8 +117,29 @@
         leaderboardTableBody: document.getElementById('leaderboard-table-body'),
         tutorialModal: document.getElementById('tutorial-modal'),
         btnStartGame: document.getElementById('btn-start-game'),
-        btnCloseTutorial: document.getElementById('btn-close-tutorial')
+        btnCloseTutorial: document.getElementById('btn-close-tutorial'),
+        bossSelectModal: document.getElementById('boss-select-modal'),
+        btnCloseBossSelect: document.getElementById('btn-close-boss-select'),
+        tabLbBigboss: document.getElementById('tab-lb-bigboss'),
+        tabLbPhantom: document.getElementById('tab-lb-phantom'),
+        bossNameLabel: document.getElementById('boss-name-label'),
+        btnSwitchBoss: document.getElementById('btn-switch-boss'),
+        btnSwitchBossText: document.getElementById('btn-switch-boss-text'),
+        survivalTimerBanner: document.getElementById('survival-timer-banner'),
+        survivalCountdownDigits: document.getElementById('survival-countdown-digits')
       };
+
+      if (this.hud.btnSwitchBoss) {
+        const switchBossHandler = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.switchBoss();
+        };
+        this.hud.btnSwitchBoss.addEventListener('click', switchBossHandler);
+        this.hud.btnSwitchBoss.addEventListener('touchend', switchBossHandler, { passive: false });
+      }
 
       if (this.hud.btnStartGame) {
         const startFight = (e) => {
@@ -152,6 +178,77 @@
         this.hud.tutorialModal.addEventListener('click', backdropClick);
       }
 
+      // Boss Select Modal event listeners
+      if (this.hud.btnCloseBossSelect) {
+        const closeBS = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.closeBossSelectModal();
+        };
+        this.hud.btnCloseBossSelect.addEventListener('click', closeBS);
+        this.hud.btnCloseBossSelect.addEventListener('touchend', closeBS, { passive: false });
+      }
+
+      if (this.hud.bossSelectModal) {
+        const backdropBSClick = (e) => {
+          if (e.target === this.hud.bossSelectModal) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+            this.closeBossSelectModal();
+          }
+        };
+        this.hud.bossSelectModal.addEventListener('click', backdropBSClick);
+      }
+
+      // Delegate boss card fight buttons
+      const fightBtns = document.querySelectorAll('.btn-select-fight');
+      fightBtns.forEach(btn => {
+        const handleFight = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          const bossId = btn.getAttribute('data-boss-id') || 'boss1';
+          this.selectBossAndStartGame(bossId);
+        };
+        btn.addEventListener('click', handleFight);
+        btn.addEventListener('touchend', handleFight, { passive: false });
+      });
+
+      // Delegate boss card view leaderboard buttons
+      const viewLbBtns = document.querySelectorAll('.btn-select-lb');
+      viewLbBtns.forEach(btn => {
+        const handleViewLb = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          const bossId = btn.getAttribute('data-boss-id') || 'bigboss';
+          this.openLeaderboardModal(null, bossId);
+        };
+        btn.addEventListener('click', handleViewLb);
+        btn.addEventListener('touchend', handleViewLb, { passive: false });
+      });
+
+      // Leaderboard tab switcher buttons
+      const lbTabBtns = document.querySelectorAll('.leaderboard-tab-btn');
+      lbTabBtns.forEach(tabBtn => {
+        const handleTab = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          const boss = tabBtn.getAttribute('data-boss') || 'bigboss';
+          this.renderLeaderboardTable(null, boss);
+        };
+        tabBtn.addEventListener('click', handleTab);
+        tabBtn.addEventListener('touchend', handleTab, { passive: false });
+      });
+
       if (this.hud.btnRestart) {
         const restart = (e) => {
           if (e) e.stopPropagation();
@@ -179,7 +276,12 @@
         this.hud.btnLeaderboardRestart.addEventListener('click', (e) => {
           if (e) e.stopPropagation();
           this.closeLeaderboardModal();
-          this.restartGame();
+          const targetBoss = this.currentLeaderboardBoss === 'phantom' ? 'boss2' : 'boss1';
+          if (this.activeBossId !== targetBoss) {
+            this.switchBoss(targetBoss);
+          } else {
+            this.restartGame();
+          }
         });
       }
     }
@@ -204,6 +306,54 @@
       this.ctx.scale(dpr, dpr);
     }
 
+    createBossInstance(id) {
+      if (id === 'boss2' && window.Boss2) {
+        return new window.Boss2();
+      }
+      return new window.Boss();
+    }
+
+    switchBoss(bossId) {
+      if (bossId) {
+        this.activeBossId = bossId;
+      } else {
+        this.activeBossId = this.activeBossId === 'boss1' ? 'boss2' : 'boss1';
+      }
+      if (window.GameConfig) {
+        window.GameConfig.activeBossId = this.activeBossId;
+      }
+      this.boss = this.createBossInstance(this.activeBossId);
+      this.syncBossUI();
+      this.restartGame();
+
+      if (window.ParticleSystem) {
+        window.ParticleSystem.spawnShockwave(0, 0, 160, 0.45, '#00e5ff');
+      }
+      if (window.SoundFX && window.SoundFX.playDash) {
+        window.SoundFX.playDash();
+      }
+    }
+
+    syncBossUI() {
+      const isBoss2 = this.activeBossId === 'boss2';
+      if (this.hud.bossNameLabel) {
+        this.hud.bossNameLabel.textContent = isBoss2 ? 'PHANTOM BOSS' : 'BIGBOSS';
+      }
+      if (this.hud.btnSwitchBossText) {
+        this.hud.btnSwitchBossText.textContent = isBoss2 ? '👑 切换关卡 1: BIGBOSS' : '👻 切换关卡 2: 幻影首领';
+      }
+      if (this.hud.btnSwitchBoss) {
+        if (isBoss2) {
+          this.hud.btnSwitchBoss.classList.add('boss2-active');
+        } else {
+          this.hud.btnSwitchBoss.classList.remove('boss2-active');
+        }
+      }
+      if (this.hud.survivalTimerBanner) {
+        this.hud.survivalTimerBanner.style.display = 'none';
+      }
+    }
+
     restartGame() {
       this.isVictory = false;
       this.setPaused(false);
@@ -216,6 +366,10 @@
       this.bulletTimeTimer = 0;
       this.hitstopTimer = 0;
       this.cameraShakeTimer = 0;
+
+      if (this.hud && this.hud.survivalTimerBanner) {
+        this.hud.survivalTimerBanner.style.display = 'none';
+      }
 
       // Reset Battle Timer
       this.battleTime = 0;
@@ -234,7 +388,11 @@
       if (this.hud.tutorialModal) {
         this.hud.tutorialModal.classList.remove('open');
       }
+      if (this.hud.bossSelectModal) {
+        this.hud.bossSelectModal.classList.remove('open');
+      }
       this.isTutorialOpen = false;
+      this.isBossSelectOpen = false;
 
       this.isRunning = true;
       this.lastTime = performance.now();
@@ -254,6 +412,45 @@
       this.isTutorialOpen = false;
       this.lastTime = performance.now();
       window.SoundFX.playDash();
+
+      // Immediately open Boss Selection Modal!
+      this.openBossSelectModal();
+    }
+
+    openBossSelectModal() {
+      if (this.hud && this.hud.bossSelectModal) {
+        this.hud.bossSelectModal.classList.add('open');
+      }
+      this.isBossSelectOpen = true;
+      this.setPaused(true);
+    }
+
+    closeBossSelectModal() {
+      if (this.hud && this.hud.bossSelectModal) {
+        this.hud.bossSelectModal.classList.remove('open');
+      }
+      this.isBossSelectOpen = false;
+      this.setPaused(false);
+      this.isRunning = true;
+      this.lastTime = performance.now();
+    }
+
+    selectBossAndStartGame(bossId) {
+      const targetBoss = bossId === 'boss2' ? 'boss2' : 'boss1';
+      this.closeBossSelectModal();
+      if (this.activeBossId !== targetBoss) {
+        this.switchBoss(targetBoss);
+      } else {
+        this.restartGame();
+      }
+      this.setPaused(false);
+      this.isRunning = true;
+      this.lastTime = performance.now();
+
+      if (window.SoundManager) {
+        window.SoundManager.unlockAudio();
+        window.SoundManager.perfectParry();
+      }
     }
 
     updateBattleTimerHUD(overrideText) {
@@ -266,12 +463,43 @@
       this.hud.battleTimerDisplay.textContent = window.StorageService ? window.StorageService.formatTimeMs(ms) : (this.battleTime.toFixed(2) + 's');
     }
 
-    async openLeaderboardModal(highlightId = null) {
-      if (!this.hud.leaderboardModal || !this.hud.leaderboardTableBody) return;
-      this.hud.leaderboardTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#8b949e;">正在加载排行榜数据...</td></tr>';
+    async openLeaderboardModal(highlightId = null, initialBossId = null) {
+      if (!this.hud.leaderboardModal) return;
+      const targetBoss = initialBossId
+        ? (window.StorageService ? window.StorageService.normalizeBossId(initialBossId) : initialBossId)
+        : (this.activeBossId === 'boss2' ? 'phantom' : 'bigboss');
+      this.currentLeaderboardBoss = targetBoss;
       this.hud.leaderboardModal.classList.add('open');
+      await this.renderLeaderboardTable(highlightId, targetBoss);
+    }
 
-      const records = window.StorageService ? await window.StorageService.loadLeaderboard() : [];
+    syncLeaderboardTabsUI(activeBoss) {
+      const norm = window.StorageService ? window.StorageService.normalizeBossId(activeBoss) : activeBoss;
+      if (this.hud.tabLbBigboss) {
+        if (norm === 'bigboss') {
+          this.hud.tabLbBigboss.classList.add('active');
+        } else {
+          this.hud.tabLbBigboss.classList.remove('active');
+        }
+      }
+      if (this.hud.tabLbPhantom) {
+        if (norm === 'phantom') {
+          this.hud.tabLbPhantom.classList.add('active');
+        } else {
+          this.hud.tabLbPhantom.classList.remove('active');
+        }
+      }
+    }
+
+    async renderLeaderboardTable(highlightId = null, bossId = 'bigboss') {
+      const norm = window.StorageService ? window.StorageService.normalizeBossId(bossId) : bossId;
+      this.currentLeaderboardBoss = norm;
+      this.syncLeaderboardTabsUI(norm);
+
+      if (!this.hud.leaderboardTableBody) return;
+      this.hud.leaderboardTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#8b949e;">正在加载排行榜数据...</td></tr>';
+
+      const records = window.StorageService ? await window.StorageService.loadLeaderboard(norm) : [];
       if (!records || records.length === 0) {
         this.hud.leaderboardTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color:#8b949e;">暂无速通记录</td></tr>';
         return;
@@ -316,16 +544,25 @@
       if (this.hud.leaderboardModal) {
         this.hud.leaderboardModal.classList.remove('open');
       }
+      if (this.isBossSelectOpen) {
+        if (this.hud.bossSelectModal) {
+          this.hud.bossSelectModal.classList.add('open');
+        }
+      } else if (!this.isTutorialOpen) {
+        this.setPaused(false);
+        this.isRunning = true;
+      }
     }
 
     onPlayerDeath() {
       if (this.isVictory) return;
       this.triggerScreenShake(1.4, 0.5);
       if (this.hud.resultModal && this.hud.resultTitle && this.hud.resultStats) {
+        const bName = (this.boss && this.boss.name) ? this.boss.name : 'BIGBOSS';
         this.hud.resultTitle.className = 'result-title defeat';
         this.hud.resultTitle.textContent = 'DEFEAT / 战败';
         this.hud.resultStats.innerHTML = `
-          BIGBOSS 剩余血量: ${Math.round((this.boss.hp / this.boss.maxHp) * 100)}%<br>
+          ${bName} 剩余血量: ${Math.round((this.boss.hp / this.boss.maxHp) * 100)}%<br>
           最高连击数: ${this.comboCount} Hits
         `;
         this.hud.resultModal.classList.add('open');
@@ -375,6 +612,7 @@
       this.balls = [];
 
       // 3. Boss Slain celebration FX
+      const bName = (this.boss && this.boss.name) ? this.boss.name : 'BIGBOSS';
       this.triggerScreenShake(2.0, 0.6);
       window.SoundFX.playExplosion();
       if (window.SoundManager) {
@@ -383,7 +621,11 @@
       window.ParticleSystem.spawnShockwave(this.boss.x, this.boss.y, 180, 0.55, '#ffcc00');
       window.ParticleSystem.spawnSparks(this.boss.x, this.boss.y, 50, '#ff3366', 2.0);
       window.ParticleSystem.spawnSparks(this.boss.x, this.boss.y, 45, '#ffcc00', 1.8);
-      window.ParticleSystem.spawnDamageText(this.boss.x, this.boss.y - 20, 'BIGBOSS SLAIN!', true, '#ffcc00');
+      window.ParticleSystem.spawnDamageText(this.boss.x, this.boss.y - 20, `${bName} SLAIN!`, true, '#ffcc00');
+
+      if (this.hud && this.hud.survivalTimerBanner) {
+        this.hud.survivalTimerBanner.style.display = 'none';
+      }
 
       // 4. Dramatic 0.5s hitstop slow-motion freeze frame
       this.triggerHitstop(0.5);
@@ -395,7 +637,7 @@
         if (this.hud.resultModal && this.hud.resultTitle && this.hud.resultStats) {
           const lastName = window.StorageService ? window.StorageService.getLastPlayerName() : 'CYBER_PLAYER';
           this.hud.resultTitle.className = 'result-title victory';
-          this.hud.resultTitle.textContent = '🏆 VICTORY! BIGBOSS 击破达成';
+          this.hud.resultTitle.textContent = `🏆 VICTORY! ${bName} 击破达成`;
           this.hud.resultStats.innerHTML = `
             <div class="victory-time-banner">
               <span class="victory-time-label">⏱️ 速通耗时:</span>
@@ -426,24 +668,26 @@
               submitBtn.disabled = true;
               submitBtn.textContent = '正在同步...';
               let recordId = null;
+              const currentBossKey = this.activeBossId === 'boss2' ? 'phantom' : 'bigboss';
               if (window.StorageService) {
                 const res = await window.StorageService.addRecord({
                   name: rawName,
                   timeMs: timeMs,
                   timeFormatted: this.finalBattleTimeFormatted,
                   combo: this.comboCount
-                });
+                }, currentBossKey);
                 recordId = res.newRecordId;
               }
               this.hud.resultModal.classList.remove('open');
-              this.openLeaderboardModal(recordId);
+              this.openLeaderboardModal(recordId, currentBossKey);
             };
           }
 
           if (viewBtn) {
             viewBtn.onclick = () => {
               this.hud.resultModal.classList.remove('open');
-              this.openLeaderboardModal();
+              const currentBossKey = this.activeBossId === 'boss2' ? 'phantom' : 'bigboss';
+              this.openLeaderboardModal(null, currentBossKey);
             };
           }
         }
@@ -608,6 +852,17 @@
       // 7. Update Boss (Frozen if Boss defeated / Victory)
       if (!this.isVictory && this.boss.alive) {
         this.boss.update(dt, this.player, arenaCfg);
+
+        // Check Boss 2 Pillar Collision in P1 (bumping into pillars breaks stealth)
+        if (this.boss instanceof window.Boss2 && this.boss.currentPhase === 1 && this.boss.isDrifting && this.arena) {
+          for (const obs of this.arena.aliveObstacles) {
+            const dist = window.Physics.dist(this.boss.x, this.boss.y, obs.x, obs.y);
+            if (dist <= (this.boss.hitboxRadius + obs.radius)) {
+              this.boss.breakStealthOnPillar(obs);
+              break;
+            }
+          }
+        }
       }
 
       // 8. Update Balls
@@ -719,6 +974,7 @@
     updateHUD() {
       // Boss HP Bar
       const boss = this.boss;
+      const isBoss2 = this.activeBossId === 'boss2' || (boss instanceof window.Boss2);
       const bossHpPct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
       if (this.hud.bossHpFill) {
         this.hud.bossHpFill.style.width = `${bossHpPct}%`;
@@ -729,17 +985,20 @@
       if (this.hud.bossPhaseBadge) {
         this.hud.bossPhaseBadge.textContent = `PHASE ${boss.currentPhase}`;
       }
+      if (this.hud.bossNameLabel) {
+        this.hud.bossNameLabel.textContent = boss.name || (isBoss2 ? 'PHANTOM BOSS' : 'BIGBOSS');
+      }
 
       // Boss Phase Notches
-      const bCfg = window.GameConfig.boss;
-      if (this.hud.notchP2) {
+      const bCfg = isBoss2 && window.GameConfig.boss2 ? window.GameConfig.boss2 : window.GameConfig.boss;
+      if (this.hud.notchP2 && bCfg.phase2) {
         this.hud.notchP2.style.left = `${bCfg.phase2.thresholdMax * 100}%`;
       }
-      if (this.hud.notchP3) {
+      if (this.hud.notchP3 && bCfg.phase3) {
         this.hud.notchP3.style.left = `${bCfg.phase3.thresholdMax * 100}%`;
       }
 
-      // Boss Status Subtext (Phase Transition / P3 Shield / Exposed)
+      // Boss Status Subtext (Phase Transition / P3 Shield / Exposed / Phantom states)
       if (this.hud.bossStatusSubtext) {
         if (!boss.alive || this.isVictory) {
           this.hud.bossStatusSubtext.style.display = 'none';
@@ -747,6 +1006,34 @@
           this.hud.bossStatusSubtext.style.display = 'block';
           this.hud.bossStatusSubtext.textContent = `⚡ PHASE SHIFT / INVULNERABLE (${boss.phaseTransitionTimer.toFixed(1)}s)`;
           this.hud.bossStatusSubtext.style.color = '#00e5ff';
+        } else if (isBoss2) {
+          this.hud.bossStatusSubtext.style.display = 'block';
+          if (boss.currentPhase === 1) {
+            if (boss.isRevealed) {
+              this.hud.bossStatusSubtext.textContent = `🎯 REVEALED / 破隐现身 (${boss.revealTimer.toFixed(1)}s) 抓紧反击!`;
+              this.hud.bossStatusSubtext.style.color = '#00e5ff';
+            } else {
+              this.hud.bossStatusSubtext.textContent = '👻 STEALTH DRIFT / 潜行漂移中 (引诱撞柱破隐!)';
+              this.hud.bossStatusSubtext.style.color = '#bd40ff';
+            }
+          } else if (boss.currentPhase === 2) {
+            if (boss.p2State === 'STUNNED') {
+              this.hud.bossStatusSubtext.textContent = `💥 WALL STUNNED / 撞墙硬直 (${boss.p2StateTimer.toFixed(1)}s) 全力反击!`;
+              this.hud.bossStatusSubtext.style.color = '#00ffaa';
+            } else if (boss.p2State === 'CHARGING') {
+              this.hud.bossStatusSubtext.textContent = '⚡ HIGH-SPEED CHARGE / 极速冲撞! 引诱撞墙!';
+              this.hud.bossStatusSubtext.style.color = '#ff3366';
+            } else if (boss.p2State === 'CHARGE_TELEGRAPH') {
+              this.hud.bossStatusSubtext.textContent = '⚠️ CHARGE TELEGRAPH / 蓄力预警! 准备闪避!';
+              this.hud.bossStatusSubtext.style.color = '#ffaa00';
+            } else {
+              this.hud.bossStatusSubtext.textContent = '🎯 READY TO CHARGE / 寻找冲撞时机';
+              this.hud.bossStatusSubtext.style.color = '#88aaff';
+            }
+          } else if (boss.currentPhase === 3) {
+            this.hud.bossStatusSubtext.textContent = `⚠️ SURVIVAL OVERLOAD / 弹幕自爆倒计时 (${boss.survivalTimer.toFixed(1)}s)!`;
+            this.hud.bossStatusSubtext.style.color = '#ff3366';
+          }
         } else if (boss.currentPhase === 3 && boss.isInvulnerable && !boss.p3ShieldBroken) {
           const aliveCount = this.arena ? this.arena.aliveObstacleCount : boss.aliveObstaclesCount;
           this.hud.bossStatusSubtext.style.display = 'block';
@@ -758,6 +1045,18 @@
           this.hud.bossStatusSubtext.style.color = '#00ffaa';
         } else {
           this.hud.bossStatusSubtext.style.display = 'none';
+        }
+      }
+
+      // Survival Timer Banner in HUD for Boss 2 Phase 3
+      if (this.hud.survivalTimerBanner) {
+        if (isBoss2 && boss.currentPhase === 3 && boss.alive && !this.isVictory) {
+          this.hud.survivalTimerBanner.style.display = 'inline-flex';
+          if (this.hud.survivalCountdownDigits) {
+            this.hud.survivalCountdownDigits.textContent = (boss.survivalTimer || 0).toFixed(1) + 's';
+          }
+        } else {
+          this.hud.survivalTimerBanner.style.display = 'none';
         }
       }
 

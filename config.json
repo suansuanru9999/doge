@@ -168,7 +168,9 @@
     "obstacleLayout": "corners",
     "forceSpawnObstaclesAllPhases": false
   },
+  "activeBossId": "boss1",
   "boss": {
+    "name": "BIGBOSS",
     "maxHp": 600,
     "hitboxRadius": 55,
     "positionMode": "top",
@@ -213,6 +215,56 @@
       "fanCount": 5,
       "fanSpreadAngle": 75,
       "ringCount": 10,
+      "assignedBallPreset": "mixed"
+    }
+  },
+  "boss2": {
+    "name": "PHANTOM BOSS",
+    "maxHp": 650,
+    "hitboxRadius": 52,
+    "halo1Radius": 78,
+    "halo1Speed": 1.4,
+    "halo1Color": "#00f0ff",
+    "halo2Radius": 104,
+    "halo2Speed": -1.0,
+    "halo2Color": "#1e90ff",
+    "haloGlowIntensity": 1.0,
+    "phase1": {
+      "thresholdMax": 1.0,
+      "thresholdMin": 0.70,
+      "driftSpeed": 120,
+      "stealthOpacity": 0.15,
+      "revealDurationOnHitPillar": 4.0,
+      "fireInterval": 2.5,
+      "emitterSource": "boss",
+      "formationType": "fan",
+      "fanCount": 3,
+      "fanSpreadAngle": 45,
+      "assignedBallPreset": "mixed"
+    },
+    "phase2": {
+      "thresholdMax": 0.70,
+      "thresholdMin": 0.30,
+      "chargeSpeed": 550,
+      "chargeDelay": 2.5,
+      "telegraphDuration": 0.6,
+      "wallStunDuration": 3.0,
+      "rearFanCount": 5,
+      "rearFanSpreadAngle": 75,
+      "fireInterval": 2.8,
+      "emitterSource": "boss",
+      "formationType": "fan",
+      "assignedBallPreset": "mixed"
+    },
+    "phase3": {
+      "thresholdMax": 0.30,
+      "thresholdMin": 0.0,
+      "survivalDuration": 10.0,
+      "fireInterval": 0.65,
+      "emitterSource": "both",
+      "formationType": "spiral",
+      "spiralRate": 8,
+      "ringCount": 12,
       "assignedBallPreset": "mixed"
     }
   },

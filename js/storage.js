@@ -11,22 +11,57 @@
 (function(window) {
   'use strict';
 
-  const STORAGE_LEADERBOARD_KEY = 'DODGEBALL_LEADERBOARD_V1';
+  const STORAGE_LEADERBOARD_BIGBOSS_KEY = 'DODGEBALL_LEADERBOARD_BIGBOSS';
+  const STORAGE_LEADERBOARD_PHANTOM_KEY = 'DODGEBALL_LEADERBOARD_PHANTOM';
+  const STORAGE_LEADERBOARD_LEGACY_KEY = 'DODGEBALL_LEADERBOARD_V1';
   const STORAGE_LAST_NAME_KEY = 'DODGEBALL_LAST_PLAYER_NAME';
 
-  // Default Top 10 Speedrun fallback list
-  const DEFAULT_LEADERBOARD = [
-    { id: 'rec_01', name: 'CYBER_ACE', timeMs: 48320, timeFormatted: '00:48.32', date: '2026-10-30', combo: 32 },
-    { id: 'rec_02', name: 'PARRY_GOD', timeMs: 54150, timeFormatted: '00:54.15', date: '2026-10-31', combo: 28 },
-    { id: 'rec_03', name: 'BULLET_DANCER', timeMs: 62800, timeFormatted: '01:02.80', date: '2026-11-01', combo: 25 },
-    { id: 'rec_04', name: 'GLITCH_SLAYER', timeMs: 71450, timeFormatted: '01:11.45', date: '2026-11-01', combo: 22 },
-    { id: 'rec_05', name: 'MATRIX_RUNNER', timeMs: 78900, timeFormatted: '01:18.90', date: '2026-11-01', combo: 20 },
-    { id: 'rec_06', name: 'ECHO_STRIKE', timeMs: 85200, timeFormatted: '01:25.20', date: '2026-11-02', combo: 19 },
-    { id: 'rec_07', name: 'REFLEX_007', timeMs: 94600, timeFormatted: '01:34.60', date: '2026-11-02', combo: 17 },
-    { id: 'rec_08', name: 'VIPER_CORE', timeMs: 102100, timeFormatted: '01:42.10', date: '2026-11-02', combo: 15 },
-    { id: 'rec_09', name: 'ZERO_LATENCY', timeMs: 113750, timeFormatted: '01:53.75', date: '2026-11-02', combo: 14 },
-    { id: 'rec_10', name: 'NEON_SHIELD', timeMs: 128500, timeFormatted: '02:08.50', date: '2026-11-02', combo: 12 }
+  // Default Top 10 Speedrun fallback list for BIGBOSS
+  const DEFAULT_LEADERBOARD_BIGBOSS = [
+    { id: 'bb_01', name: 'CYBER_ACE', timeMs: 48320, timeFormatted: '00:48.32', date: '2026-10-30', combo: 32 },
+    { id: 'bb_02', name: 'PARRY_GOD', timeMs: 54150, timeFormatted: '00:54.15', date: '2026-10-31', combo: 28 },
+    { id: 'bb_03', name: 'BULLET_DANCER', timeMs: 62800, timeFormatted: '01:02.80', date: '2026-11-01', combo: 25 },
+    { id: 'bb_04', name: 'GLITCH_SLAYER', timeMs: 71450, timeFormatted: '01:11.45', date: '2026-11-01', combo: 22 },
+    { id: 'bb_05', name: 'MATRIX_RUNNER', timeMs: 78900, timeFormatted: '01:18.90', date: '2026-11-01', combo: 20 },
+    { id: 'bb_06', name: 'ECHO_STRIKE', timeMs: 85200, timeFormatted: '01:25.20', date: '2026-11-02', combo: 19 },
+    { id: 'bb_07', name: 'REFLEX_007', timeMs: 94600, timeFormatted: '01:34.60', date: '2026-11-02', combo: 17 },
+    { id: 'bb_08', name: 'VIPER_CORE', timeMs: 102100, timeFormatted: '01:42.10', date: '2026-11-02', combo: 15 },
+    { id: 'bb_09', name: 'ZERO_LATENCY', timeMs: 113750, timeFormatted: '01:53.75', date: '2026-11-02', combo: 14 },
+    { id: 'bb_10', name: 'NEON_SHIELD', timeMs: 128500, timeFormatted: '02:08.50', date: '2026-11-02', combo: 12 }
   ];
+
+  // Default Top 10 Speedrun fallback list for PHANTOM BOSS
+  const DEFAULT_LEADERBOARD_PHANTOM = [
+    { id: 'ph_01', name: 'GHOST_BUSTER', timeMs: 42150, timeFormatted: '00:42.15', date: '2026-11-01', combo: 35 },
+    { id: 'ph_02', name: 'SHADOW_WALKER', timeMs: 49800, timeFormatted: '00:49.80', date: '2026-11-01', combo: 30 },
+    { id: 'ph_03', name: 'OVERLOAD_PRO', timeMs: 56300, timeFormatted: '00:56.30', date: '2026-11-02', combo: 27 },
+    { id: 'ph_04', name: 'PHANTOM_PARRY', timeMs: 64200, timeFormatted: '01:04.20', date: '2026-11-02', combo: 24 },
+    { id: 'ph_05', name: 'WALL_CRASHER', timeMs: 72100, timeFormatted: '01:12.10', date: '2026-11-02', combo: 21 },
+    { id: 'ph_06', name: 'STEALTH_KILLER', timeMs: 81400, timeFormatted: '01:21.40', date: '2026-11-02', combo: 19 },
+    { id: 'ph_07', name: 'REFLEX_ZERO', timeMs: 89900, timeFormatted: '01:29.90', date: '2026-11-02', combo: 17 },
+    { id: 'ph_08', name: 'CYBER_SPECTER', timeMs: 98700, timeFormatted: '01:38.70', date: '2026-11-02', combo: 15 },
+    { id: 'ph_09', name: 'BULLET_SURVIVOR', timeMs: 109200, timeFormatted: '01:49.20', date: '2026-11-02', combo: 13 },
+    { id: 'ph_10', name: 'VOID_RUNNER', timeMs: 122400, timeFormatted: '02:02.40', date: '2026-11-02', combo: 11 }
+  ];
+
+  function normalizeBossId(bossId) {
+    if (!bossId) return 'bigboss';
+    const s = String(bossId).toLowerCase();
+    if (s.includes('phantom') || s === 'boss2') return 'phantom';
+    return 'bigboss';
+  }
+
+  function getResourceName(bossId) {
+    return normalizeBossId(bossId) === 'phantom' ? 'leaderboard_phantom' : 'leaderboard_bigboss';
+  }
+
+  function getStorageKey(bossId) {
+    return normalizeBossId(bossId) === 'phantom' ? STORAGE_LEADERBOARD_PHANTOM_KEY : STORAGE_LEADERBOARD_BIGBOSS_KEY;
+  }
+
+  function getDefaultLeaderboard(bossId) {
+    return normalizeBossId(bossId) === 'phantom' ? DEFAULT_LEADERBOARD_PHANTOM : DEFAULT_LEADERBOARD_BIGBOSS;
+  }
 
   function formatTimeMs(ms) {
     const totalSeconds = Math.max(0, ms / 1000);
@@ -76,6 +111,9 @@
   const StorageService = {
     formatTimeMs,
 
+    normalizeBossId,
+    getResourceName,
+
     getLastPlayerName() {
       try {
         return localStorage.getItem(STORAGE_LAST_NAME_KEY) || 'CYBER_PLAYER';
@@ -91,7 +129,12 @@
     },
 
     // Load leaderboard with Cloud -> LocalStorage -> ./leaderboard.json fallback
-    async loadLeaderboard() {
+    async loadLeaderboard(bossId = 'bigboss') {
+      const normBoss = normalizeBossId(bossId);
+      const resource = getResourceName(normBoss);
+      const storageKey = getStorageKey(normBoss);
+      const defaultList = getDefaultLeaderboard(normBoss);
+
       const storageCfg = (window.GameConfig && window.GameConfig.storage) ? window.GameConfig.storage : {};
       const cloudUrl = storageCfg.cloudSyncUrl;
       const apiKey = storageCfg.apiKey;
@@ -99,7 +142,7 @@
       // 1. Try Cloud REST GET if configured
       if (cloudUrl && cloudUrl.trim().length > 0) {
         try {
-          const endpoint = resolveCloudEndpoint(cloudUrl, 'leaderboard');
+          const endpoint = resolveCloudEndpoint(cloudUrl, resource);
           let requestUrl = endpoint;
           const headers = {};
           if (apiKey && apiKey.trim().length > 0) {
@@ -126,18 +169,21 @@
             }
             if (list.length > 0) {
               const clean = this.sanitizeAndSort(list);
-              this.saveLocalLeaderboard(clean);
+              this.saveLocalLeaderboard(clean, normBoss);
               return clean;
             }
           }
         } catch (err) {
-          console.warn('[StorageService] Cloud leaderboard fetch failed, falling back to local:', err);
+          console.warn(`[StorageService] Cloud leaderboard fetch for ${resource} failed, falling back to local:`, err);
         }
       }
 
       // 2. Try LocalStorage
       try {
-        const localRaw = localStorage.getItem(STORAGE_LEADERBOARD_KEY);
+        let localRaw = localStorage.getItem(storageKey);
+        if (!localRaw && normBoss === 'bigboss') {
+          localRaw = localStorage.getItem(STORAGE_LEADERBOARD_LEGACY_KEY);
+        }
         if (localRaw) {
           const parsed = JSON.parse(localRaw);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -145,27 +191,34 @@
           }
         }
       } catch (e) {
-        console.warn('[StorageService] LocalStorage read failed:', e);
+        console.warn(`[StorageService] LocalStorage read for ${storageKey} failed:`, e);
       }
 
-      // 3. Try fetching static ./leaderboard.json from root
+      // 3. Try fetching static ./leaderboard_*.json from root
       try {
-        const res = await fetch('./leaderboard.json?t=' + Date.now());
-        if (res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json) && json.length > 0) {
-            const clean = this.sanitizeAndSort(json);
-            this.saveLocalLeaderboard(clean);
-            return clean;
-          }
+        const fileNames = normBoss === 'phantom' 
+          ? ['./leaderboard_phantom.json'] 
+          : ['./leaderboard_bigboss.json', './leaderboard.json'];
+        for (const fn of fileNames) {
+          try {
+            const res = await fetch(fn + '?t=' + Date.now());
+            if (res.ok) {
+              const json = await res.json();
+              if (Array.isArray(json) && json.length > 0) {
+                const clean = this.sanitizeAndSort(json);
+                this.saveLocalLeaderboard(clean, normBoss);
+                return clean;
+              }
+            }
+          } catch (_) {}
         }
       } catch (e) {
-        console.warn('[StorageService] Static leaderboard.json fetch failed:', e);
+        console.warn(`[StorageService] Static leaderboard fetch failed for ${resource}:`, e);
       }
 
       // 4. Return built-in default list
-      const cleanDefaults = this.sanitizeAndSort(DEFAULT_LEADERBOARD);
-      this.saveLocalLeaderboard(cleanDefaults);
+      const cleanDefaults = this.sanitizeAndSort(defaultList);
+      this.saveLocalLeaderboard(cleanDefaults, normBoss);
       return cleanDefaults;
     },
 
@@ -184,16 +237,19 @@
       }));
     },
 
-    saveLocalLeaderboard(list) {
+    saveLocalLeaderboard(list, bossId = 'bigboss') {
       try {
-        localStorage.setItem(STORAGE_LEADERBOARD_KEY, JSON.stringify(list));
+        const storageKey = getStorageKey(bossId);
+        localStorage.setItem(storageKey, JSON.stringify(list));
       } catch (e) {
         console.warn('[StorageService] Failed to save to LocalStorage:', e);
       }
     },
 
     // Add new speedrun record, sort, cull to Top 10, and sync
-    async addRecord(entry) {
+    async addRecord(entry, bossId = 'bigboss') {
+      const normBoss = normalizeBossId(bossId);
+      const resource = getResourceName(normBoss);
       const name = (String(entry.name || 'CYBER_PLAYER')).trim().slice(0, 12) || 'CYBER_PLAYER';
       this.setLastPlayerName(name);
 
@@ -212,8 +268,8 @@
         combo
       };
 
-      // Load existing records
-      let currentList = await this.loadLeaderboard();
+      // Load existing records for this specific boss
+      let currentList = await this.loadLeaderboard(normBoss);
       currentList.push(newRecord);
 
       // Sort ascending by timeMs
@@ -225,17 +281,17 @@
       // Strict Top 10 Culling: automatically evict beyond 10th
       currentList = currentList.slice(0, 10);
 
-      // Save locally
-      this.saveLocalLeaderboard(currentList);
+      // Save locally to specific boss key
+      this.saveLocalLeaderboard(currentList, normBoss);
 
-      // Sync to cloud if configured
+      // Sync to cloud at resource endpoint (e.g. leaderboard_bigboss.json / leaderboard_phantom.json)
       const storageCfg = (window.GameConfig && window.GameConfig.storage) ? window.GameConfig.storage : {};
       const cloudUrl = storageCfg.cloudSyncUrl;
       const apiKey = storageCfg.apiKey;
 
       if (cloudUrl && cloudUrl.trim().length > 0) {
         try {
-          const endpoint = resolveCloudEndpoint(cloudUrl, 'leaderboard');
+          const endpoint = resolveCloudEndpoint(cloudUrl, resource);
           let requestUrl = endpoint;
           const headers = { 'Content-Type': 'application/json' };
           if (apiKey && apiKey.trim().length > 0) {
@@ -251,7 +307,7 @@
             headers,
             body: JSON.stringify(currentList)
           });
-          console.log('[StorageService] Leaderboard synced to cloud successfully:', requestUrl);
+          console.log(`[StorageService] Leaderboard (${resource}) synced to cloud successfully:`, requestUrl);
         } catch (e) {
           console.warn('[StorageService] Cloud sync PUT failed:', e);
         }
@@ -261,14 +317,18 @@
         list: currentList,
         newRecordId: newId,
         rank: rankIndex + 1, // 1-based rank
-        isTop10
+        isTop10,
+        bossId: normBoss
       };
     },
 
-    // Export leaderboard.json to disk
-    async exportLeaderboardFile() {
-      const list = await this.loadLeaderboard();
+    // Export leaderboard file to disk
+    async exportLeaderboardFile(bossId = 'bigboss') {
+      const normBoss = normalizeBossId(bossId);
+      const resource = getResourceName(normBoss);
+      const list = await this.loadLeaderboard(normBoss);
       const jsonStr = JSON.stringify(list, null, 2);
+      const fileName = `${resource}.json`;
 
       if ('showSaveFilePicker' in window) {
         try {

@@ -197,7 +197,14 @@
     // -------------------------------------------------------------------------
     // 控制器 D: Boss 阶段与攻击手段控件 (Boss & Pattern Inspector)
     // -------------------------------------------------------------------------
+    // Active Boss Level ('boss1' = BIGBOSS, 'boss2' = PHANTOM BOSS)
+    activeBossId: 'boss1',
+
+    // -------------------------------------------------------------------------
+    // 控制器 D: Boss 属性与三阶段行为 (Boss 1: BIGBOSS)
+    // -------------------------------------------------------------------------
     boss: {
+      name: 'BIGBOSS',
       maxHp: 600,
       hitboxRadius: 55, // 20 to 120
       positionMode: 'top', // top | center | roaming
@@ -242,6 +249,67 @@
         fanCount: 5,
         fanSpreadAngle: 75,
         ringCount: 10,
+        assignedBallPreset: 'mixed'
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // 控制器 F: BOSS 2 / 幻影首领调试面板 (BOSS_2_INSPECTOR: PHANTOM BOSS)
+    // -------------------------------------------------------------------------
+    boss2: {
+      name: 'PHANTOM BOSS',
+      maxHp: 650,
+      hitboxRadius: 52,
+      // Visual Halos
+      halo1Radius: 78,
+      halo1Speed: 1.4,
+      halo1Color: '#00f0ff',
+      halo2Radius: 104,
+      halo2Speed: -1.0,
+      halo2Color: '#1e90ff',
+      haloGlowIntensity: 1.0,
+
+      // P1 Stealth Drift & Reveal
+      phase1: {
+        thresholdMax: 1.0,
+        thresholdMin: 0.70,
+        driftSpeed: 120, // px/s
+        stealthOpacity: 0.15, // 0.05 to 0.50
+        revealDurationOnHitPillar: 4.0, // seconds
+        fireInterval: 2.5, // seconds
+        emitterSource: 'boss', // boss | walls | both
+        formationType: 'fan', // single | fan | ring | spiral
+        fanCount: 3,
+        fanSpreadAngle: 45,
+        assignedBallPreset: 'mixed'
+      },
+
+      // P2 Charge, Stun & Rear Spread
+      phase2: {
+        thresholdMax: 0.70,
+        thresholdMin: 0.30,
+        chargeSpeed: 550, // px/s
+        chargeDelay: 2.5, // seconds between charges
+        telegraphDuration: 0.6, // seconds
+        wallStunDuration: 3.0, // seconds
+        rearFanCount: 5,
+        rearFanSpreadAngle: 75,
+        fireInterval: 2.8,
+        emitterSource: 'boss',
+        formationType: 'fan',
+        assignedBallPreset: 'mixed'
+      },
+
+      // P3 10s Survival Bullet Hell
+      phase3: {
+        thresholdMax: 0.30,
+        thresholdMin: 0.0,
+        survivalDuration: 10.0, // seconds
+        fireInterval: 0.65, // rapid bullet hell
+        emitterSource: 'both',
+        formationType: 'spiral', // spiral | ring
+        spiralRate: 8,
+        ringCount: 12,
         assignedBallPreset: 'mixed'
       }
     },

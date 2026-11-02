@@ -203,19 +203,20 @@
       this.p3ObstaclesSpawned = false;
       const cfg = window.GameConfig.arena;
       const forceAll = cfg.forceSpawnObstaclesAllPhases === true;
-      const isP3 = window.Game && window.Game.boss && window.Game.boss.currentPhase === 3;
+      const isP3 = window.Game && window.Game.boss && window.Game.boss.currentPhase === 3 && window.Game.activeBossId !== 'boss2';
+      const isBoss2 = (window.Game && window.Game.activeBossId === 'boss2') || (window.GameConfig && window.GameConfig.activeBossId === 'boss2');
 
-      if (!forceAll && !isP3) {
+      if (!forceAll && !isP3 && !isBoss2) {
         return;
       }
 
-      if (isP3 || forceAll) {
+      if (isP3 || forceAll || isBoss2) {
         this.p3ObstaclesSpawned = true;
       }
 
       const count = cfg.obstacleCount;
       const size = cfg.obstacleSize;
-      const destructible = cfg.obstacleDestructible;
+      const destructible = isBoss2 ? false : cfg.obstacleDestructible;
       const layout = cfg.obstacleLayout;
 
       if (layout === 'none' || count <= 0) return;

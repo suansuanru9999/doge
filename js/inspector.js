@@ -502,6 +502,9 @@
         case 'tab-boss':
           this.buildControllerD(container);
           break;
+        case 'tab-boss2':
+          this.buildControllerBoss2(container);
+          break;
         case 'tab-audio':
           this.buildControllerE(container);
           break;
@@ -1025,6 +1028,201 @@
         { label: '标准白球 (White)', value: 'preset1' }
       ], val => {
         window.GameConfig.set('boss.phase3.assignedBallPreset', val);
+      });
+      container.appendChild(gP3);
+    }
+
+    // -------------------------------------------------------------
+    // 控制器 F: 幻影首领专属调试面板 (BOSS 2 / PHANTOM BOSS INSPECTOR)
+    // -------------------------------------------------------------
+    buildControllerBoss2(container) {
+      const b2 = window.GameConfig.boss2;
+      if (!b2) return;
+
+      const isCurrentActive = window.Game && window.Game.activeBossId === 'boss2';
+
+      // Group 0: 首领切换与激活管控 (Boss Switch & Quick Action)
+      const g0 = this.createGroup('关卡首领切换与激活 (Level Boss Switcher)');
+      this.addButton(g0, isCurrentActive ? '🟢 幻影首领当前交战中 (点击切换回 BIGBOSS)' : '⚔️ 激活并切换至幻影首领 (PHANTOM BOSS)', () => {
+        if (window.Game && window.Game.switchBoss) {
+          window.Game.switchBoss(isCurrentActive ? 'boss1' : 'boss2');
+          this.renderTabContent('tab-boss2');
+        }
+      }, {
+        background: isCurrentActive ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #bd40ff, #00e5ff)',
+        color: '#fff',
+        fontWeight: '900',
+        borderRadius: '6px'
+      });
+      this.addButton(g0, '✨ [一键重置 幻影首领 为推荐参数]', () => {
+        window.GameConfig.applyCrispPreset();
+        this.renderTabContent('tab-boss2');
+      }, {
+        background: 'rgba(0, 229, 255, 0.15)',
+        border: '1px solid #00e5ff',
+        color: '#00f0ff',
+        fontWeight: 'bold',
+        borderRadius: '6px'
+      });
+      container.appendChild(g0);
+
+      // Group 1: 基础体征与双蓝光环 (Base & Dual Blue Halos)
+      const g1 = this.createGroup('首领体征与双蓝发光环 (Base & Dual Blue Halos)');
+      this.addSlider(g1, '首领最大生命值 (Max HP)', b2.maxHp, 200, 2500, 50, val => {
+        window.GameConfig.set('boss2.maxHp', val);
+        if (window.Game && window.Game.boss instanceof window.Boss2) {
+          window.Game.boss.maxHp = val;
+          window.Game.boss.hp = Math.min(window.Game.boss.hp, val);
+        }
+      });
+      this.addSlider(g1, '判定体型半径 (Hitbox Radius)', b2.hitboxRadius, 20, 120, 2, val => {
+        window.GameConfig.set('boss2.hitboxRadius', val);
+        if (window.Game && window.Game.boss instanceof window.Boss2) {
+          window.Game.boss.hitboxRadius = val;
+        }
+      }, 'px');
+      this.addSlider(g1, '内光环半径 (Halo 1 Radius)', b2.halo1Radius !== undefined ? b2.halo1Radius : 62, 30, 140, 2, val => {
+        window.GameConfig.set('boss2.halo1Radius', val);
+      }, 'px');
+      this.addSlider(g1, '内光环旋转角速度 (Halo 1 Speed)', b2.halo1Speed !== undefined ? b2.halo1Speed : 1.2, -5.0, 5.0, 0.1, val => {
+        window.GameConfig.set('boss2.halo1Speed', val);
+      }, 'rad/s');
+      this.addSlider(g1, '外光环半径 (Halo 2 Radius)', b2.halo2Radius !== undefined ? b2.halo2Radius : 78, 40, 180, 2, val => {
+        window.GameConfig.set('boss2.halo2Radius', val);
+      }, 'px');
+      this.addSlider(g1, '外光环旋转角速度 (Halo 2 Speed)', b2.halo2Speed !== undefined ? b2.halo2Speed : -0.85, -5.0, 5.0, 0.1, val => {
+        window.GameConfig.set('boss2.halo2Speed', val);
+      }, 'rad/s');
+      this.addSlider(g1, '光环发光强度 (Halo Glow Intensity)', b2.haloGlowIntensity !== undefined ? b2.haloGlowIntensity : 1.0, 0.2, 2.5, 0.1, val => {
+        window.GameConfig.set('boss2.haloGlowIntensity', val);
+      });
+      container.appendChild(g1);
+
+      // Group 2: Phase 1 隐形漂移与撞柱破隐 (Phase 1: Stealth Drift & Reveal)
+      const gP1 = this.createGroup('阶段 1: 隐形漂移与撞柱破隐 (P1: 100% ~ 70% HP)');
+      this.addSlider(gP1, '漂移游走速度 (Drift Speed)', b2.phase1.driftSpeed, 40, 300, 10, val => {
+        window.GameConfig.set('boss2.phase1.driftSpeed', val);
+      }, 'px/s');
+      this.addSlider(gP1, '潜行隐身不透明度 (Stealth Opacity)', b2.phase1.stealthOpacity, 0.05, 0.5, 0.02, val => {
+        window.GameConfig.set('boss2.phase1.stealthOpacity', val);
+      });
+      this.addSlider(gP1, '撞柱破隐持续时长 (Reveal Duration)', b2.phase1.revealDurationOnHitPillar, 1.0, 10.0, 0.5, val => {
+        window.GameConfig.set('boss2.phase1.revealDurationOnHitPillar', val);
+      }, 's');
+      this.addSlider(gP1, '弹幕发射波次间隔 (Wave Rest Interval)', b2.phase1.fireInterval, 0.5, 5.0, 0.1, val => {
+        window.GameConfig.set('boss2.phase1.fireInterval', val);
+      }, 's');
+      this.addSelect(gP1, '阶段一发射源 (Emitter Source)', b2.phase1.emitterSource, [
+        { label: 'Boss 本体发射 (Boss Only)', value: 'boss' },
+        { label: '四版边墙壁交叉火力 (Walls Only)', value: 'walls' },
+        { label: '本体与墙壁同时发射 (Both)', value: 'both' }
+      ], val => {
+        window.GameConfig.set('boss2.phase1.emitterSource', val);
+      });
+      this.addSelect(gP1, '阶段一阵型 (Formation Type)', b2.phase1.formationType, [
+        { label: '扇形散射 (Fan Spread)', value: 'fan' },
+        { label: '单发狙击 (Single Aimed)', value: 'single' },
+        { label: '360° 环形弹幕 (360 Ring)', value: 'ring' },
+        { label: '螺旋连射 (Spiral)', value: 'spiral' }
+      ], val => {
+        window.GameConfig.set('boss2.phase1.formationType', val);
+      });
+      this.addSlider(gP1, '扇形子弹颗数 (Fan Count)', b2.phase1.fanCount || 4, 2, 12, 1, val => {
+        window.GameConfig.set('boss2.phase1.fanCount', val);
+      });
+      this.addSlider(gP1, '扇形夹角 (Fan Spread Angle)', b2.phase1.fanSpreadAngle || 45, 15, 120, 5, val => {
+        window.GameConfig.set('boss2.phase1.fanSpreadAngle', val);
+      }, '°');
+      this.addSelect(gP1, '阶段一发射球体预设', b2.phase1.assignedBallPreset, [
+        { label: '混合交替 (Mixed)', value: 'mixed' },
+        { label: '标准白球 (White)', value: 'preset1' },
+        { label: '重型红球 (Red)', value: 'preset2' },
+        { label: '弧线紫球 (Purple)', value: 'preset3' }
+      ], val => {
+        window.GameConfig.set('boss2.phase1.assignedBallPreset', val);
+      });
+      container.appendChild(gP1);
+
+      // Group 3: Phase 2 冲撞、撞墙硬直与后背反击 (Phase 2: Charge & Wall Stun)
+      const gP2 = this.createGroup('阶段 2: 极速冲撞、硬直与后背反击 (P2: 70% ~ 30% HP)');
+      this.addSlider(gP2, '冲撞速度 (Charge Speed)', b2.phase2.chargeSpeed, 200, 1000, 25, val => {
+        window.GameConfig.set('boss2.phase2.chargeSpeed', val);
+      }, 'px/s');
+      this.addSlider(gP2, '冲撞冷却间歇 (Charge Delay)', b2.phase2.chargeDelay, 1.0, 6.0, 0.2, val => {
+        window.GameConfig.set('boss2.phase2.chargeDelay', val);
+      }, 's');
+      this.addSlider(gP2, '冲撞蓄力预警耗时 (Telegraph Duration)', b2.phase2.telegraphDuration || 0.6, 0.2, 2.0, 0.05, val => {
+        window.GameConfig.set('boss2.phase2.telegraphDuration', val);
+      }, 's');
+      this.addSlider(gP2, '撞墙眩晕硬直时长 (Wall Stun Duration)', b2.phase2.wallStunDuration, 1.0, 8.0, 0.5, val => {
+        window.GameConfig.set('boss2.phase2.wallStunDuration', val);
+      }, 's');
+      this.addSlider(gP2, '撞墙后背反击弹颗数 (Rear Fan Count)', b2.phase2.rearFanCount || 5, 3, 11, 1, val => {
+        window.GameConfig.set('boss2.phase2.rearFanCount', val);
+      });
+      this.addSlider(gP2, '撞墙后背反击夹角 (Rear Fan Angle)', b2.phase2.rearFanSpreadAngle || 75, 30, 140, 5, val => {
+        window.GameConfig.set('boss2.phase2.rearFanSpreadAngle', val);
+      }, '°');
+      this.addSlider(gP2, '呼吸波次停火间隔 (Wave Rest Interval)', b2.phase2.fireInterval, 0.4, 5.0, 0.1, val => {
+        window.GameConfig.set('boss2.phase2.fireInterval', val);
+      }, 's');
+      this.addSelect(gP2, '阶段二发射源 (Emitter Source)', b2.phase2.emitterSource, [
+        { label: 'Boss 本体发射 (Boss Only)', value: 'boss' },
+        { label: '四版边墙壁交叉火力 (Walls Only)', value: 'walls' },
+        { label: '本体与墙壁同时发射 (Both)', value: 'both' }
+      ], val => {
+        window.GameConfig.set('boss2.phase2.emitterSource', val);
+      });
+      this.addSelect(gP2, '阶段二发射阵型 (Formation Type)', b2.phase2.formationType, [
+        { label: '螺旋连射 (Spiral)', value: 'spiral' },
+        { label: '扇形散射 (Fan Spread)', value: 'fan' },
+        { label: '单发狙击 (Single Aimed)', value: 'single' },
+        { label: '360° 环形弹幕 (360 Ring)', value: 'ring' }
+      ], val => {
+        window.GameConfig.set('boss2.phase2.formationType', val);
+      });
+      this.addSelect(gP2, '阶段二发射球体预设', b2.phase2.assignedBallPreset, [
+        { label: '弧线紫球 (Purple)', value: 'preset3' },
+        { label: '混合交替 (Mixed)', value: 'mixed' },
+        { label: '重型红球 (Red)', value: 'preset2' },
+        { label: '标准白球 (White)', value: 'preset1' }
+      ], val => {
+        window.GameConfig.set('boss2.phase2.assignedBallPreset', val);
+      });
+      container.appendChild(gP2);
+
+      // Group 4: Phase 3 极限弹幕生存与自爆破灭 (Phase 3: Survival Bullet Hell)
+      const gP3 = this.createGroup('阶段 3: 极限弹幕生存与自爆 (P3: <= 30% HP)');
+      this.addSlider(gP3, '极限生存倒计时 (Survival Duration)', b2.phase3.survivalDuration, 5.0, 30.0, 1.0, val => {
+        window.GameConfig.set('boss2.phase3.survivalDuration', val);
+      }, 's');
+      this.addSlider(gP3, '自爆前狂暴弹幕间隔 (Bullet Hell Interval)', b2.phase3.fireInterval, 0.2, 2.0, 0.05, val => {
+        window.GameConfig.set('boss2.phase3.fireInterval', val);
+      }, 's');
+      this.addSelect(gP3, '阶段三发射源 (Emitter Source)', b2.phase3.emitterSource, [
+        { label: '本体与墙壁同时发射 (Both)', value: 'both' },
+        { label: 'Boss 本体发射 (Boss Only)', value: 'boss' },
+        { label: '四版边墙壁交叉火力 (Walls Only)', value: 'walls' }
+      ], val => {
+        window.GameConfig.set('boss2.phase3.emitterSource', val);
+      });
+      this.addSelect(gP3, '阶段三阵型 (Formation Type)', b2.phase3.formationType, [
+        { label: '360° 环形弹幕 (360 Ring)', value: 'ring' },
+        { label: '螺旋连射 (Spiral)', value: 'spiral' },
+        { label: '扇形散射 (Fan Spread)', value: 'fan' }
+      ], val => {
+        window.GameConfig.set('boss2.phase3.formationType', val);
+      });
+      this.addSlider(gP3, '环形弹幕密度 (Ring Bullet Count)', b2.phase3.ringCount || 18, 8, 36, 2, val => {
+        window.GameConfig.set('boss2.phase3.ringCount', val);
+      });
+      this.addSelect(gP3, '阶段三发射球体预设', b2.phase3.assignedBallPreset, [
+        { label: '重型红球 (Red)', value: 'preset2' },
+        { label: '混合交替 (Mixed)', value: 'mixed' },
+        { label: '弧线紫球 (Purple)', value: 'preset3' },
+        { label: '标准白球 (White)', value: 'preset1' }
+      ], val => {
+        window.GameConfig.set('boss2.phase3.assignedBallPreset', val);
       });
       container.appendChild(gP3);
     }

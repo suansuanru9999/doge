@@ -33,6 +33,11 @@
           <span>🏆 速通榜</span>
         </button>
 
+        <!-- Boss Switcher Pill (Level 1 BIGBOSS / Level 2 PHANTOM BOSS) -->
+        <button id="btn-switch-boss" class="btn-switch-boss" title="点击切换对战首领 (关卡 1: BIGBOSS / 关卡 2: 幻影首领)">
+          <span id="btn-switch-boss-text">👻 关卡 2: 幻影首领</span>
+        </button>
+
         <!-- Orientation Switcher Button (Dev Element: Hidden by default) -->
         <button id="btn-orientation-toggle" class="btn-orientation-toggle dev-element dev-hidden" title="强制横屏/自适应切换">
           <span>🔄 横屏显示</span>
@@ -48,7 +53,7 @@
         <div class="boss-hud-container">
           <div class="boss-title-row">
             <div class="boss-name">
-              <span>BIGBOSS</span>
+              <span id="boss-name-label">BIGBOSS</span>
               <span id="boss-phase-badge" class="boss-phase-badge">PHASE 1</span>
             </div>
             <div id="boss-hp-text" class="boss-hp-text">600 / 600 (100%)</div>
@@ -61,6 +66,13 @@
             </div>
           </div>
           <div id="boss-status-subtext" class="boss-status-subtext" style="display: none;"></div>
+
+          <!-- P3 10s Bullet Hell Survival Timer Banner (PHANTOM BOSS P3) -->
+          <div id="survival-timer-banner" class="survival-timer-banner" style="display: none;">
+            <span class="survival-icon">⚡</span>
+            <span class="survival-label">SURVIVAL:</span>
+            <span id="survival-countdown-digits" class="survival-digits">10.0s</span>
+          </div>
         </div>
 
         <!-- Combo & Damage Multiplier - Top Left -->
@@ -190,7 +202,8 @@
         <button class="tab-btn active" data-tab="tab-player">🎮 控制器 A (玩家/连击)</button>
         <button class="tab-btn" data-tab="tab-ball">⚽ 控制器 B (球体属性)</button>
         <button class="tab-btn" data-tab="tab-arena">🏟️ 控制器 C (场地/障碍)</button>
-        <button class="tab-btn" data-tab="tab-boss">👿 控制器 D (Boss/阶段)</button>
+        <button class="tab-btn" data-tab="tab-boss">👿 控制器 D (BIGBOSS/一代)</button>
+        <button class="tab-btn" data-tab="tab-boss2">👻 控制器 F (BOSS 2/幻影首领)</button>
         <button class="tab-btn" data-tab="tab-audio">🔊 控制器 E (音效/合成器)</button>
       </nav>
 
@@ -241,6 +254,15 @@
           <div class="leaderboard-title">⚡ 速通排行榜 TOP 10</div>
           <button id="btn-close-leaderboard" class="btn-icon" title="关闭">✕</button>
         </div>
+        <!-- Isolated Leaderboard Switcher Tabs -->
+        <div class="leaderboard-tabs-bar">
+          <button id="tab-lb-bigboss" class="leaderboard-tab-btn active" data-boss="bigboss">
+            <span class="tab-icon">👑</span> BIGBOSS 速通榜
+          </button>
+          <button id="tab-lb-phantom" class="leaderboard-tab-btn" data-boss="phantom">
+            <span class="tab-icon">👻</span> PHANTOM BOSS 速通榜
+          </button>
+        </div>
         <div class="leaderboard-body">
           <table class="leaderboard-table">
             <thead>
@@ -259,6 +281,73 @@
         </div>
         <div class="leaderboard-footer">
           <button id="btn-leaderboard-restart" class="btn-footer btn-restart">🔄 再来一局 (PLAY AGAIN)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Boss Selection Modal (选择挑战首领弹窗) -->
+    <div id="boss-select-modal" class="boss-select-modal-overlay">
+      <div class="boss-select-card">
+        <div class="boss-select-header">
+          <div class="boss-select-badge">LEVEL SELECT / 首领选择</div>
+          <h2 class="boss-select-title">【SELECT BOSS / 选择挑战首领】</h2>
+          <button id="btn-close-boss-select" class="btn-icon btn-close-boss-select" title="关闭并开始对战">✕</button>
+        </div>
+        
+        <div class="boss-select-body">
+          <div class="boss-cards-grid">
+            <!-- Boss 1 Card: BIGBOSS -->
+            <div class="boss-card card-bigboss" data-boss-id="boss1">
+              <div class="boss-card-level-tag">关卡 1 · LEVEL 1</div>
+              <div class="boss-card-avatar avatar-bigboss">
+                <div class="avatar-boss-glow glow-red"></div>
+                <div class="avatar-boss-shape shape-bigboss">👑</div>
+              </div>
+              <div class="boss-card-content">
+                <h3 class="boss-card-title">BIGBOSS</h3>
+                <p class="boss-card-sub">经典打铁反弹战 / 三阶段破柱护盾</p>
+                <div class="boss-features-list">
+                  <span class="feature-tag">🎯 360° 环形核心球</span>
+                  <span class="feature-tag">🛡️ P3 四立柱过载护盾</span>
+                  <span class="feature-tag">💥 经典硬核街机手感</span>
+                </div>
+              </div>
+              <div class="boss-card-actions">
+                <button class="btn-select-fight btn-fight-bigboss" data-boss-id="boss1">
+                  ⚔️ 挑战此 Boss
+                </button>
+                <button class="btn-select-lb btn-lb-bigboss" data-boss-id="bigboss">
+                  📊 查看该 Boss 排行榜
+                </button>
+              </div>
+            </div>
+
+            <!-- Boss 2 Card: PHANTOM BOSS -->
+            <div class="boss-card card-phantom" data-boss-id="boss2">
+              <div class="boss-card-level-tag level-tag-phantom">关卡 2 · LEVEL 2</div>
+              <div class="boss-card-avatar avatar-phantom">
+                <div class="avatar-boss-glow glow-blue"></div>
+                <div class="avatar-boss-shape shape-phantom">👻</div>
+              </div>
+              <div class="boss-card-content">
+                <h3 class="boss-card-title title-phantom">PHANTOM BOSS</h3>
+                <p class="boss-card-sub">隐形漂移潜行战 / 冲撞晕眩与10秒弹幕生存</p>
+                <div class="boss-features-list">
+                  <span class="feature-tag tag-phantom">🌀 双蓝独立旋转光环</span>
+                  <span class="feature-tag tag-phantom">💥 撞柱破隐 / 撞墙硬直反击</span>
+                  <span class="feature-tag tag-phantom">⚠️ 10秒过载弹幕生存自爆</span>
+                </div>
+              </div>
+              <div class="boss-card-actions">
+                <button class="btn-select-fight btn-fight-phantom" data-boss-id="boss2">
+                  ⚔️ 挑战此 Boss
+                </button>
+                <button class="btn-select-lb btn-lb-phantom" data-boss-id="phantom">
+                  📊 查看该 Boss 排行榜
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -344,6 +433,7 @@
   <script src="js/ball.js"></script>
   <script src="js/player.js"></script>
   <script src="js/boss.js"></script>
+  <script src="js/boss2.js"></script>
   <script src="js/arena.js"></script>
   <script src="js/input.js"></script>
   <script src="js/storage.js"></script>

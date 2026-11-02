@@ -1473,6 +1473,26 @@ textarea#json-textarea {
     font-size: 10px !important;
   }
 
+  .btn-switch-boss {
+    top: 36px !important;
+    right: 10px !important;
+    padding: 2px 7px !important;
+    font-size: 9.5px !important;
+  }
+
+  .survival-timer-banner {
+    top: 40px !important;
+    padding: 4px 12px !important;
+  }
+
+  .survival-label {
+    font-size: 11px !important;
+  }
+
+  .survival-digits {
+    font-size: 16px !important;
+  }
+
   /* 10. Lightweight, Locked Virtual Controls */
   .joystick-touch-region {
     position: absolute !important;
@@ -1665,6 +1685,112 @@ textarea#json-textarea {
   background: rgba(255, 204, 0, 0.2);
   box-shadow: 0 0 16px rgba(255, 204, 0, 0.5);
   transform: scale(1.04);
+}
+
+/* Boss Switcher Pill (Level 1 BIGBOSS / Level 2 PHANTOM BOSS) */
+.btn-switch-boss {
+  position: absolute;
+  top: 38px;
+  right: 14px;
+  background: rgba(14, 20, 28, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  color: #00e5ff;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  transition: all 0.15s ease;
+}
+
+.btn-switch-boss:hover {
+  background: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+  transform: scale(1.04);
+}
+
+.btn-switch-boss.boss2-active {
+  border-color: rgba(189, 64, 255, 0.6);
+  color: #d880ff;
+  box-shadow: 0 0 10px rgba(189, 64, 255, 0.3);
+}
+
+.btn-switch-boss.boss2-active:hover {
+  background: rgba(189, 64, 255, 0.25);
+  box-shadow: 0 0 16px rgba(189, 64, 255, 0.6);
+}
+
+/* Phantom Boss P3 Survival Countdown Banner */
+.survival-timer-banner {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 4, 28, 0.92);
+  border: 1.5px solid #ff3366;
+  border-radius: 8px;
+  padding: 6px 18px;
+  box-shadow: 0 0 20px rgba(255, 51, 102, 0.6), inset 0 0 12px rgba(255, 51, 102, 0.3);
+  z-index: 40;
+  pointer-events: none;
+  animation: survival-pulse 1s infinite alternate;
+}
+
+@keyframes survival-pulse {
+  0% {
+    box-shadow: 0 0 12px rgba(255, 51, 102, 0.5), inset 0 0 8px rgba(255, 51, 102, 0.2);
+    border-color: #ff3366;
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(255, 0, 80, 0.9), inset 0 0 16px rgba(255, 0, 80, 0.5);
+    border-color: #ff0050;
+  }
+}
+
+.survival-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.survival-icon {
+  font-size: 16px;
+  animation: survival-blink 0.5s infinite alternate;
+}
+
+@keyframes survival-blink {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+.survival-label {
+  font-family: Impact, "Arial Black", "PingFang SC", sans-serif;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: #ff88a3;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.8);
+}
+
+.survival-digits {
+  font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 0 12px rgba(255, 204, 0, 0.9);
+  min-width: 65px;
+  text-align: right;
 }
 
 /* ================= Inspector Top Quick Actions ================= */
@@ -1892,6 +2018,52 @@ textarea#json-textarea {
   letter-spacing: 1px;
 }
 
+/* Leaderboard Boss Switcher Tabs */
+.leaderboard-tabs-bar {
+  display: flex;
+  background: rgba(8, 12, 18, 0.95);
+  border-bottom: 1px solid var(--panel-border);
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.leaderboard-tab-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.leaderboard-tab-btn:hover {
+  background: rgba(0, 229, 255, 0.08);
+  color: #fff;
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.leaderboard-tab-btn.active {
+  background: rgba(0, 229, 255, 0.18);
+  border-color: var(--cyan-primary);
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+.leaderboard-tab-btn[data-boss="phantom"].active {
+  background: rgba(189, 64, 255, 0.2);
+  border-color: #bd40ff;
+  color: #d880ff;
+  box-shadow: 0 0 12px rgba(189, 64, 255, 0.35);
+}
+
 .leaderboard-body {
   padding: 12px 16px;
   overflow-y: auto;
@@ -2000,6 +2172,390 @@ textarea#json-textarea {
   border-top: 1px solid var(--panel-border);
   display: flex;
   justify-content: flex-end;
+}
+
+/* ==========================================================================
+   Boss Selection Modal (选择挑战首领弹窗)
+   ========================================================================== */
+.boss-select-modal-overlay {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(4, 7, 12, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000;
+  padding: clamp(8px, 2vw, 16px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.boss-select-modal-overlay.open {
+  display: flex;
+  animation: tutorialFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.boss-select-card {
+  position: relative;
+  background: rgba(14, 20, 28, 0.96);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 16px;
+  width: min(660px, 96%);
+  max-height: 94%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.2);
+  overflow: hidden;
+}
+
+.boss-select-header {
+  position: relative;
+  padding: 14px 18px 10px 18px;
+  border-bottom: 1px solid var(--panel-border);
+  background: rgba(10, 14, 20, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.boss-select-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--cyan-primary);
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.boss-select-title {
+  font-family: Impact, "Arial Black", "PingFang SC", sans-serif;
+  font-size: clamp(16px, 3.8vw, 22px);
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+}
+
+.btn-close-boss-select {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+
+.boss-select-body {
+  padding: 14px 16px 16px 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 90px);
+}
+
+.boss-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.boss-card {
+  position: relative;
+  background: rgba(10, 15, 22, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.boss-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.boss-card.card-bigboss {
+  border-color: rgba(255, 51, 102, 0.45);
+}
+
+.boss-card.card-bigboss:hover {
+  border-color: #ff3366;
+  box-shadow: 0 0 24px rgba(255, 51, 102, 0.35);
+}
+
+.boss-card.card-phantom {
+  border-color: rgba(189, 64, 255, 0.45);
+}
+
+.boss-card.card-phantom:hover {
+  border-color: #bd40ff;
+  box-shadow: 0 0 24px rgba(189, 64, 255, 0.35);
+}
+
+.boss-card-level-tag {
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: #ff5983;
+  margin-bottom: 8px;
+}
+
+.boss-card-level-tag.level-tag-phantom {
+  background: rgba(189, 64, 255, 0.15);
+  border-color: rgba(189, 64, 255, 0.4);
+  color: #d880ff;
+}
+
+.boss-card-avatar {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 10px auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-boss-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  filter: blur(8px);
+  opacity: 0.7;
+}
+
+.avatar-boss-glow.glow-red {
+  background: radial-gradient(circle, rgba(255, 51, 102, 0.8) 0%, transparent 70%);
+}
+
+.avatar-boss-glow.glow-blue {
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.8) 0%, rgba(189, 64, 255, 0.6) 60%, transparent 75%);
+}
+
+.avatar-boss-shape {
+  position: relative;
+  font-size: 26px;
+  z-index: 2;
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.6));
+}
+
+.boss-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.boss-card-title {
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #ff3366;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+  margin-bottom: 4px;
+}
+
+.boss-card-title.title-phantom {
+  color: #00f0ff;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.boss-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.boss-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feature-tag {
+  font-size: 10px;
+  color: #ccd6e0;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border-left: 2px solid rgba(255, 51, 102, 0.6);
+}
+
+.feature-tag.tag-phantom {
+  border-left-color: rgba(0, 229, 255, 0.7);
+}
+
+.boss-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.btn-select-fight {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-fight-bigboss {
+  background: linear-gradient(135deg, #ff1a40, #ff5983);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(255, 26, 64, 0.4);
+}
+
+.btn-fight-bigboss:hover {
+  box-shadow: 0 0 20px rgba(255, 26, 64, 0.7);
+  transform: scale(1.02);
+}
+
+.btn-fight-phantom {
+  background: linear-gradient(135deg, #bd40ff, #00e5ff);
+  color: #000;
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+}
+
+.btn-fight-phantom:hover {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.7);
+  transform: scale(1.02);
+}
+
+.btn-select-lb {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-select-lb:hover {
+  background: rgba(255, 204, 0, 0.12);
+  border-color: rgba(255, 204, 0, 0.4);
+  color: var(--gold-accent);
+}
+
+/* Mobile Responsive for Boss Select Modal */
+@media (max-width: 620px) {
+  .boss-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .boss-card {
+    padding: 10px;
+  }
+  .boss-card-avatar {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 6px;
+  }
+  .avatar-boss-shape {
+    font-size: 22px;
+  }
+  .boss-card-title {
+    font-size: 14px;
+  }
+  .boss-card-sub {
+    font-size: 10px;
+  }
+  .feature-tag {
+    font-size: 9.5px;
+    padding: 2px 5px;
+  }
+  .btn-select-fight {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+  .btn-select-lb {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+}
+
+/* Mobile Landscape for Boss Select Modal */
+@media (max-height: 520px) {
+  .boss-select-card {
+    max-height: 96%;
+  }
+  .boss-select-header {
+    padding: 6px 14px;
+  }
+  .boss-select-badge {
+    margin-bottom: 1px;
+    font-size: 8.5px;
+  }
+  .boss-select-title {
+    font-size: 14px;
+  }
+  .boss-select-body {
+    padding: 8px 12px;
+  }
+  .boss-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+  .boss-card {
+    padding: 8px;
+  }
+  .boss-card-avatar {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 4px;
+  }
+  .avatar-boss-shape {
+    font-size: 18px;
+  }
+  .boss-card-title {
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  .boss-card-sub {
+    font-size: 9.5px;
+    margin-bottom: 4px;
+  }
+  .boss-features-list {
+    display: none;
+  }
+  .btn-select-fight {
+    padding: 6px 8px;
+    font-size: 10.5px;
+  }
+  .btn-select-lb {
+    padding: 4px 6px;
+    font-size: 9.5px;
+  }
 }
 
 /* ==========================================================================
