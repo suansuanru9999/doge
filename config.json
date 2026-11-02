@@ -41,6 +41,11 @@
     "maxGroundedBalls": 2,
     "maxActiveCoreBalls": 3,
     "onlyPlayerThrownBallsDrop": true,
+    "mixedWeights": {
+      "white": 1,
+      "purple": 1,
+      "red": 1
+    },
     "presets": {
       "preset1": {
         "name": "标准白球 (Normal Core Ball)",
@@ -222,6 +227,8 @@
     "name": "PHANTOM BOSS",
     "maxHp": 650,
     "hitboxRadius": 52,
+    "p1StealthOpacity": 0.15,
+    "p1RevealDuration": 4.0,
     "halo1Radius": 78,
     "halo1Speed": 1.4,
     "halo1Color": "#00f0ff",
@@ -229,6 +236,14 @@
     "halo2Speed": -1.0,
     "halo2Color": "#1e90ff",
     "haloGlowIntensity": 1.0,
+    "obstacles": {
+      "spawnerEnabled": true,
+      "spawnInterval": 6.0,
+      "lifetime": 5.0,
+      "maxCount": 3,
+      "size": 26,
+      "hp": 40
+    },
     "phase1": {
       "thresholdMax": 1.0,
       "thresholdMin": 0.70,

@@ -110,11 +110,12 @@
     // Arena Boundaries & Collisions
     // -------------------------------------------------------------
     checkArenaBoundary(x, y, radius, arenaConfig) {
-      const shape = arenaConfig.shape;
+      const cfg = arenaConfig || (window.GameConfig && window.GameConfig.arena) || { shape: 'rect', width: 800, height: 500, radius: 350 };
+      const shape = cfg.shape;
 
       if (shape === 'circle') {
         const d = Math.hypot(x, y);
-        const maxR = arenaConfig.radius - radius;
+        const maxR = cfg.radius - radius;
         if (d >= maxR) {
           // Normal pointing inward towards center
           const nx = -x / (d || 1);
@@ -132,7 +133,7 @@
 
       if (shape === 'octagon') {
         // Octagon approximate with 8 planes
-        const R = arenaConfig.radius - radius;
+        const R = cfg.radius - radius;
         const cos45 = Math.SQRT1_2;
         const normals = [
           { nx: -1, ny: 0, d: R },
@@ -161,8 +162,8 @@
       }
 
       // Default: Rectangle
-      const halfW = arenaConfig.width / 2 - radius;
-      const halfH = arenaConfig.height / 2 - radius;
+      const halfW = (cfg.width || 800) / 2 - radius;
+      const halfH = (cfg.height || 500) / 2 - radius;
       let collided = false;
       let nx = 0, ny = 0;
       let correctedX = x, correctedY = y;

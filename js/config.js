@@ -169,6 +169,7 @@
       maxGroundedBalls: 2, // Maximum grounded balls allowed on floor simultaneously (FIFO eviction, default 2)
       maxActiveCoreBalls: 3, // Maximum in-flight Core Dodgeballs allowed (default 3)
       onlyPlayerThrownBallsDrop: true, // Only balls thrown by player that hit Boss drop to ground (default true)
+      mixedWeights: { white: 1, purple: 1, red: 1 }, // Equal 1:1:1 mixed weights for White/Purple/Red balls
       presets: JSON.parse(JSON.stringify(BALL_PRESETS))
     },
 
@@ -260,6 +261,8 @@
       name: 'PHANTOM BOSS',
       maxHp: 650,
       hitboxRadius: 52,
+      p1StealthOpacity: 0.15,
+      p1RevealDuration: 4.0,
       // Visual Halos
       halo1Radius: 78,
       halo1Speed: 1.4,
@@ -268,6 +271,16 @@
       halo2Speed: -1.0,
       halo2Color: '#1e90ff',
       haloGlowIntensity: 1.0,
+
+      // Boss 2 Dynamic Obstacles Controller (动态刷新与限时消失障碍物)
+      obstacles: {
+        spawnerEnabled: true,
+        spawnInterval: 6.0, // seconds between spawn waves (3.0s ~ 15.0s)
+        lifetime: 5.0, // obstacle lifetime before disappearing (2.0s ~ 10.0s)
+        maxCount: 3, // max simultaneous obstacles on field (1 ~ 6)
+        size: 26, // obstacle radius
+        hp: 40 // obstacle health points
+      },
 
       // P1 Stealth Drift & Reveal
       phase1: {
@@ -376,7 +389,29 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
-            return deepMerge(deepClone(DEFAULT_CONFIG), parsed);
+            const merged = deepMerge(deepClone(DEFAULT_CONFIG), parsed);
+            if (!merged.boss2) {
+              merged.boss2 = deepClone(DEFAULT_CONFIG.boss2);
+            }
+            if (merged.boss2) {
+              if (merged.boss2.p1StealthOpacity !== undefined && merged.boss2.phase1) {
+                merged.boss2.phase1.stealthOpacity = merged.boss2.p1StealthOpacity;
+              } else if (merged.boss2.phase1 && merged.boss2.phase1.stealthOpacity !== undefined) {
+                merged.boss2.p1StealthOpacity = merged.boss2.phase1.stealthOpacity;
+              }
+              if (merged.boss2.p1RevealDuration !== undefined && merged.boss2.phase1) {
+                merged.boss2.phase1.revealDurationOnHitPillar = merged.boss2.p1RevealDuration;
+              } else if (merged.boss2.phase1 && merged.boss2.phase1.revealDurationOnHitPillar !== undefined) {
+                merged.boss2.p1RevealDuration = merged.boss2.phase1.revealDurationOnHitPillar;
+              }
+            }
+            if (!merged.boss2.obstacles) {
+              merged.boss2.obstacles = deepClone(DEFAULT_CONFIG.boss2.obstacles);
+            }
+            if (!merged.activeBossId) {
+              merged.activeBossId = DEFAULT_CONFIG.activeBossId || 'boss1';
+            }
+            return merged;
           }
         }
       }
@@ -423,12 +458,28 @@
 
   const GameConfig = {
     // Direct access to nested structures
+    get activeBossId() { return currentConfig.activeBossId || 'boss1'; },
+    set activeBossId(val) {
+      currentConfig.activeBossId = val;
+      saveToStorage(currentConfig);
+      this.notify('activeBossId', val);
+      triggerCloudAutoSync();
+    },
     get player() { return currentConfig.player; },
     get combo() { return currentConfig.combo; },
     get camera() { return currentConfig.camera; },
     get ball() { return currentConfig.ball; },
     get arena() { return currentConfig.arena; },
     get boss() { return currentConfig.boss; },
+    get boss2() {
+      if (!currentConfig.boss2) {
+        currentConfig.boss2 = deepClone(DEFAULT_CONFIG.boss2);
+      }
+      if (!currentConfig.boss2.obstacles) {
+        currentConfig.boss2.obstacles = deepClone(DEFAULT_CONFIG.boss2.obstacles);
+      }
+      return currentConfig.boss2;
+    },
     get input() { return currentConfig.input; },
     get audio() { return currentConfig.audio; },
     get storage() { return currentConfig.storage; },
@@ -444,6 +495,20 @@
           const json = await res.json();
           if (json && typeof json === 'object') {
             currentConfig = deepMerge(deepClone(DEFAULT_CONFIG), json);
+            if (!currentConfig.boss2) currentConfig.boss2 = deepClone(DEFAULT_CONFIG.boss2);
+            if (currentConfig.boss2) {
+              if (currentConfig.boss2.p1StealthOpacity !== undefined && currentConfig.boss2.phase1) {
+                currentConfig.boss2.phase1.stealthOpacity = currentConfig.boss2.p1StealthOpacity;
+              } else if (currentConfig.boss2.phase1 && currentConfig.boss2.phase1.stealthOpacity !== undefined) {
+                currentConfig.boss2.p1StealthOpacity = currentConfig.boss2.phase1.stealthOpacity;
+              }
+              if (currentConfig.boss2.p1RevealDuration !== undefined && currentConfig.boss2.phase1) {
+                currentConfig.boss2.phase1.revealDurationOnHitPillar = currentConfig.boss2.p1RevealDuration;
+              } else if (currentConfig.boss2.phase1 && currentConfig.boss2.phase1.revealDurationOnHitPillar !== undefined) {
+                currentConfig.boss2.p1RevealDuration = currentConfig.boss2.phase1.revealDurationOnHitPillar;
+              }
+            }
+            if (!currentConfig.activeBossId) currentConfig.activeBossId = 'boss1';
             loadedSource = 'file';
           }
         }
@@ -484,6 +549,20 @@
 
           if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
             currentConfig = deepMerge(currentConfig, cloudData);
+            if (!currentConfig.boss2) currentConfig.boss2 = deepClone(DEFAULT_CONFIG.boss2);
+            if (currentConfig.boss2) {
+              if (currentConfig.boss2.p1StealthOpacity !== undefined && currentConfig.boss2.phase1) {
+                currentConfig.boss2.phase1.stealthOpacity = currentConfig.boss2.p1StealthOpacity;
+              } else if (currentConfig.boss2.phase1 && currentConfig.boss2.phase1.stealthOpacity !== undefined) {
+                currentConfig.boss2.p1StealthOpacity = currentConfig.boss2.phase1.stealthOpacity;
+              }
+              if (currentConfig.boss2.p1RevealDuration !== undefined && currentConfig.boss2.phase1) {
+                currentConfig.boss2.phase1.revealDurationOnHitPillar = currentConfig.boss2.p1RevealDuration;
+              } else if (currentConfig.boss2.phase1 && currentConfig.boss2.phase1.revealDurationOnHitPillar !== undefined) {
+                currentConfig.boss2.p1RevealDuration = currentConfig.boss2.phase1.revealDurationOnHitPillar;
+              }
+            }
+            if (!currentConfig.activeBossId) currentConfig.activeBossId = 'boss1';
             loadedSource = 'cloud';
             console.log('[GameConfig] Authoritative config loaded from Firebase Cloud Database:', cloudData);
           }
@@ -518,6 +597,8 @@
       }
       if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
         currentConfig = deepMerge(deepClone(DEFAULT_CONFIG), cloudData);
+        if (!currentConfig.boss2) currentConfig.boss2 = deepClone(DEFAULT_CONFIG.boss2);
+        if (!currentConfig.activeBossId) currentConfig.activeBossId = 'boss1';
         saveToStorage(currentConfig);
         this.notify('*', currentConfig);
         return { success: true, data: currentConfig };
@@ -568,6 +649,16 @@
         obj = obj[keys[i]];
       }
       obj[keys[keys.length - 1]] = value;
+      // Sync Boss 2 P1 aliases
+      if (path === 'boss2.phase1.stealthOpacity' && currentConfig.boss2) {
+        currentConfig.boss2.p1StealthOpacity = value;
+      } else if (path === 'boss2.p1StealthOpacity' && currentConfig.boss2 && currentConfig.boss2.phase1) {
+        currentConfig.boss2.phase1.stealthOpacity = value;
+      } else if (path === 'boss2.phase1.revealDurationOnHitPillar' && currentConfig.boss2) {
+        currentConfig.boss2.p1RevealDuration = value;
+      } else if (path === 'boss2.p1RevealDuration' && currentConfig.boss2 && currentConfig.boss2.phase1) {
+        currentConfig.boss2.phase1.revealDurationOnHitPillar = value;
+      }
       saveToStorage(currentConfig);
       this.notify(path, value);
       triggerCloudAutoSync();
@@ -612,6 +703,9 @@
       currentConfig.boss.phase2.fanCount = 5;
       currentConfig.boss.phase3.fireInterval = 2.6;
       currentConfig.boss.phase3.emitterSource = 'both';
+      if (currentConfig.boss2) {
+        currentConfig.boss2.obstacles = deepClone(DEFAULT_CONFIG.boss2.obstacles);
+      }
 
       saveToStorage(currentConfig);
       this.notify('*', currentConfig);

@@ -9,19 +9,26 @@
   'use strict';
 
   class Obstacle {
-    constructor(x, y, radius, destructible = true) {
+    constructor(x, y, radius, destructible = true, lifetime = 0, customHp = null, isDynamic = false) {
       this.x = x;
       this.y = y;
       this.radius = radius;
       this.destructible = destructible;
       const cfg = window.GameConfig.arena;
-      this.maxHp = (cfg && cfg.obstacleMaxHp) ? cfg.obstacleMaxHp : 100;
+      this.maxHp = customHp !== null ? customHp : ((cfg && cfg.obstacleMaxHp) ? cfg.obstacleMaxHp : 100);
       this.hp = this.maxHp;
       this.alive = true;
       this.isDead = false;
       this.flashTimer = 0;
       this.shakeTimer = 0;
       this.riseProgress = 1.0; // 0 to 1 for spawn rising animation
+
+      // Dynamic timed obstacle properties (for Boss 2)
+      this.isDynamic = isDynamic;
+      this.lifetime = lifetime; // <= 0 means permanent until destroyed
+      this.maxLifetime = lifetime;
+      this.opacity = 1.0;
+      this.isFadingOut = false;
     }
 
     damage(amount) {
@@ -29,16 +36,18 @@
       this.hp = Math.max(0, this.hp - amount);
       this.flashTimer = 0.12;
       this.shakeTimer = 0.15;
-      window.ParticleSystem.spawnSparks(this.x, this.y, 14, '#ffaa00', 1.0);
+      window.ParticleSystem.spawnSparks(this.x, this.y, 14, this.isDynamic ? '#00e5ff' : '#ffaa00', 1.0);
 
       if (this.hp <= 0) {
         this.alive = false;
         this.isDead = true;
         window.SoundFX.playExplosion();
-        window.Game.triggerScreenShake(0.9, 0.3);
-        window.ParticleSystem.spawnShockwave(this.x, this.y, this.radius * 2.5, 0.4, '#ffaa00');
-        window.ParticleSystem.spawnSparks(this.x, this.y, 30, '#00e5ff', 1.6);
-        window.ParticleSystem.spawnDashDust(this.x, this.y, 'rgba(255, 170, 0, 0.6)');
+        if (window.Game && window.Game.triggerScreenShake) {
+          window.Game.triggerScreenShake(0.9, 0.3);
+        }
+        window.ParticleSystem.spawnShockwave(this.x, this.y, this.radius * 2.5, 0.4, this.isDynamic ? '#00e5ff' : '#ffaa00');
+        window.ParticleSystem.spawnSparks(this.x, this.y, 30, this.isDynamic ? '#00ffff' : '#00e5ff', 1.6);
+        window.ParticleSystem.spawnDashDust(this.x, this.y, this.isDynamic ? 'rgba(0, 229, 255, 0.6)' : 'rgba(255, 170, 0, 0.6)');
 
         // Notify Game of obstacle destruction for P3 Shield check
         if (window.Game && window.Game.onObstacleDestroyed) {
@@ -55,7 +64,34 @@
         this.shakeTimer = Math.max(0, this.shakeTimer - dt);
       }
       if (this.riseProgress < 1.0) {
-        this.riseProgress = Math.min(1.0, this.riseProgress + dt * 2.5);
+        this.riseProgress = Math.min(1.0, this.riseProgress + dt * 3.0);
+      }
+
+      // Dynamic timed obstacle lifetime management (Boss 2)
+      if (this.isDynamic && this.lifetime > 0) {
+        this.lifetime -= dt;
+
+        // Fade in when newly spawned
+        const age = this.maxLifetime - this.lifetime;
+        if (age < 0.4) {
+          this.opacity = Math.min(1.0, age / 0.4);
+        } else if (this.lifetime < 0.8) {
+          // Fade out smoothly in the last 0.8s
+          this.isFadingOut = true;
+          this.opacity = Math.max(0.05, this.lifetime / 0.8);
+        } else {
+          this.opacity = 1.0;
+        }
+
+        if (this.lifetime <= 0) {
+          this.alive = false;
+          this.isDead = true;
+          // Clean despawn cyber particles
+          if (window.ParticleSystem) {
+            window.ParticleSystem.spawnShockwave(this.x, this.y, this.radius * 1.5, 0.25, 'rgba(0, 229, 255, 0.4)');
+            window.ParticleSystem.spawnSparks(this.x, this.y, 10, '#00e5ff', 0.8);
+          }
+        }
       }
     }
 
@@ -74,21 +110,27 @@
       const drawY = this.y + sy;
 
       const groundPos = window.Physics.toScreen(drawX, drawY, 0, yScale);
-      const pillarH = 28 * this.riseProgress;
+      const pillarH = (this.isDynamic ? 24 : 28) * this.riseProgress;
       const topPos = window.Physics.toScreen(drawX, drawY, pillarH, yScale);
+
+      ctx.save();
+      if (this.isDynamic) {
+        ctx.globalAlpha = (ctx.globalAlpha || 1.0) * this.opacity;
+      }
 
       // 1. Floor Shadow
       ctx.save();
       ctx.beginPath();
       ctx.ellipse(groundPos.x, groundPos.y, this.radius * 1.15 * this.riseProgress, this.radius * yScale * 0.75 * this.riseProgress, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillStyle = this.isDynamic ? 'rgba(0, 15, 30, 0.45)' : 'rgba(0, 0, 0, 0.45)';
       ctx.fill();
       ctx.restore();
 
       // 2. 3D Pillar Body
       ctx.save();
-      ctx.fillStyle = this.flashTimer > 0 ? '#ffffff' : '#1a2636';
-      ctx.strokeStyle = '#00e5ff';
+      const baseBodyColor = this.isDynamic ? '#122338' : '#1a2636';
+      ctx.fillStyle = this.flashTimer > 0 ? '#ffffff' : baseBodyColor;
+      ctx.strokeStyle = this.isDynamic ? '#00e5ff' : '#00e5ff';
       ctx.lineWidth = 2;
 
       // Base cylinder
@@ -100,8 +142,9 @@
       // Pillar core glowing accent
       ctx.beginPath();
       ctx.arc(topPos.x, topPos.y, this.radius * 0.4 * this.riseProgress, 0, Math.PI * 2);
-      ctx.fillStyle = this.destructible ? '#ffaa00' : '#00e5ff';
+      ctx.fillStyle = this.isDynamic ? '#00e5ff' : (this.destructible ? '#ffaa00' : '#00e5ff');
       ctx.fill();
+      ctx.restore();
 
       // 3. Crack Decals on top if damaged
       const hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
@@ -141,16 +184,18 @@
         ctx.shadowBlur = 8;
         ctx.stroke();
 
-        // 5. Overhead Tech HP Pill Badge
+        // 5. Overhead Tech HP & Lifetime Pill Badge
         const badgeY = topPos.y - this.radius - 12;
-        const text = `HP ${Math.ceil(this.hp)}/${this.maxHp}`;
+        const text = this.isDynamic
+          ? `HP ${Math.ceil(this.hp)} [${Math.max(0, this.lifetime).toFixed(1)}s]`
+          : `HP ${Math.ceil(this.hp)}/${this.maxHp}`;
         ctx.font = 'bold 10px monospace';
         const txtWidth = ctx.measureText(text).width;
         const badgeW = txtWidth + 10;
         const badgeH = 15;
 
         ctx.fillStyle = 'rgba(8, 14, 22, 0.85)';
-        ctx.strokeStyle = hpColor;
+        ctx.strokeStyle = this.isFadingOut ? '#ff3366' : hpColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -161,7 +206,7 @@
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = hpColor;
+        ctx.fillStyle = this.isFadingOut ? '#ff6688' : hpColor;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, topPos.x, badgeY);
@@ -178,11 +223,12 @@
       this.p3WarningDuration = 1.0;
       this.p3WarningPositions = [];
       this.p3ObstaclesSpawned = false;
+      this.boss2ObstacleTimer = 0;
       this.rebuildObstacles();
 
       // Rebuild obstacles when config updates
       window.GameConfig.subscribe((path) => {
-        if (path === '*' || path.startsWith('arena.obstacle') || path === 'arena.forceSpawnObstaclesAllPhases') {
+        if (path === '*' || path.startsWith('arena.obstacle') || path === 'arena.forceSpawnObstaclesAllPhases' || path.startsWith('boss2.obstacles')) {
           this.rebuildObstacles();
         }
       });
@@ -196,27 +242,58 @@
       return this.aliveObstacles.length;
     }
 
-    // Generate obstacles based on current config preset (P1/P2 are clean unless forceSpawn is true)
+    // Generate obstacles based on active boss & preset
     rebuildObstacles() {
       this.obstacles = [];
       this.p3WarningTimer = 0;
       this.p3ObstaclesSpawned = false;
-      const cfg = window.GameConfig.arena;
-      const forceAll = cfg.forceSpawnObstaclesAllPhases === true;
-      const isP3 = window.Game && window.Game.boss && window.Game.boss.currentPhase === 3 && window.Game.activeBossId !== 'boss2';
+
       const isBoss2 = (window.Game && window.Game.activeBossId === 'boss2') || (window.GameConfig && window.GameConfig.activeBossId === 'boss2');
 
-      if (!forceAll && !isP3 && !isBoss2) {
+      // -------------------------------------------------------------
+      // PHANTOM BOSS (Boss 2): Dynamic Spawner & Timed Disappearing Obstacles
+      // -------------------------------------------------------------
+      if (isBoss2) {
+        const b2ObsCfg = (window.GameConfig && window.GameConfig.boss2 && window.GameConfig.boss2.obstacles) ||
+          (window.DEFAULT_GAME_CONFIG && window.DEFAULT_GAME_CONFIG.boss2 && window.DEFAULT_GAME_CONFIG.boss2.obstacles) || {
+            spawnerEnabled: true,
+            spawnInterval: 6.0,
+            lifetime: 5.0,
+            maxCount: 3,
+            size: 26,
+            hp: 40
+          };
+
+        this.boss2ObstacleTimer = b2ObsCfg.spawnInterval || 6.0;
+
+        if (b2ObsCfg.spawnerEnabled) {
+          // Pre-spawn 2 dynamic obstacles right at match start so battlefield is immediately tactical
+          const initCount = Math.min(2, b2ObsCfg.maxCount || 3);
+          for (let i = 0; i < initCount; i++) {
+            this.spawnBoss2DynamicObstacle(b2ObsCfg, true);
+          }
+        }
         return;
       }
 
-      if (isP3 || forceAll || isBoss2) {
+      // -------------------------------------------------------------
+      // BIGBOSS (Boss 1): Classic Symmetrical Layout & P3 Shield Pillars
+      // -------------------------------------------------------------
+      const cfg = window.GameConfig.arena;
+      const forceAll = cfg.forceSpawnObstaclesAllPhases === true;
+      const isP3 = window.Game && window.Game.boss && window.Game.boss.currentPhase === 3 && window.Game.activeBossId !== 'boss2';
+
+      if (!forceAll && !isP3) {
+        return;
+      }
+
+      if (isP3 || forceAll) {
         this.p3ObstaclesSpawned = true;
       }
 
       const count = cfg.obstacleCount;
       const size = cfg.obstacleSize;
-      const destructible = isBoss2 ? false : cfg.obstacleDestructible;
+      const destructible = cfg.obstacleDestructible;
       const layout = cfg.obstacleLayout;
 
       if (layout === 'none' || count <= 0) return;
@@ -253,6 +330,79 @@
           if (Math.hypot(ox, oy) > 120) {
             this.obstacles.push(new Obstacle(ox, oy, size, destructible));
           }
+        }
+      }
+    }
+
+    // Spawn dynamic obstacle randomly for Boss 2
+    spawnBoss2DynamicObstacle(b2ObsCfg, silent = false) {
+      const arenaCfg = window.GameConfig.arena || { shape: 'rect', width: 800, height: 500, radius: 350 };
+      const isCircle = arenaCfg.shape === 'circle';
+      const size = b2ObsCfg.size || 26;
+      const lifetime = b2ObsCfg.lifetime || 5.0;
+      const hp = b2ObsCfg.hp || 40;
+
+      const player = window.Game ? window.Game.player : null;
+      const boss = window.Game ? window.Game.boss : null;
+
+      let bestX = 0, bestY = 0;
+      let foundValid = false;
+
+      for (let attempt = 0; attempt < 25; attempt++) {
+        let testX = 0, testY = 0;
+        if (isCircle) {
+          const r = Math.sqrt(Math.random()) * ((arenaCfg.radius || 350) * 0.68);
+          const theta = Math.random() * Math.PI * 2;
+          testX = Math.cos(theta) * r;
+          testY = Math.sin(theta) * r;
+        } else {
+          const hw = ((arenaCfg.width || 800) / 2) * 0.72;
+          const hh = ((arenaCfg.height || 500) / 2) * 0.72;
+          testX = (Math.random() - 0.5) * 2 * hw;
+          testY = (Math.random() - 0.5) * 2 * hh;
+        }
+
+        // Distance constraints:
+        // 1. Avoid player
+        if (player && Math.hypot(testX - player.x, testY - player.y) < 100) continue;
+        // 2. Avoid boss
+        if (boss && Math.hypot(testX - boss.x, testY - boss.y) < 110) continue;
+        // 3. Avoid other existing alive obstacles
+        let tooCloseToOther = false;
+        for (const obs of this.obstacles) {
+          if (obs.alive && Math.hypot(testX - obs.x, testY - obs.y) < (size * 2 + 25)) {
+            tooCloseToOther = true;
+            break;
+          }
+        }
+        if (tooCloseToOther) continue;
+
+        bestX = testX;
+        bestY = testY;
+        foundValid = true;
+        break;
+      }
+
+      if (!foundValid && bestX === 0 && bestY === 0) {
+        // Fallback to randomized safe quadrant
+        const quadX = Math.random() > 0.5 ? 140 : -140;
+        const quadY = Math.random() > 0.5 ? 100 : -100;
+        bestX = quadX;
+        bestY = quadY;
+      }
+
+      const newObs = new Obstacle(bestX, bestY, size, true, lifetime, hp, true);
+      newObs.riseProgress = 0.0;
+      this.obstacles.push(newObs);
+
+      if (!silent) {
+        if (window.ParticleSystem) {
+          window.ParticleSystem.spawnShockwave(bestX, bestY, size * 2.2, 0.35, '#00e5ff');
+          window.ParticleSystem.spawnSparks(bestX, bestY, 16, '#00ffff', 1.2);
+          window.ParticleSystem.spawnDashDust(bestX, bestY, 'rgba(0, 229, 255, 0.7)');
+        }
+        if (window.SoundFX && window.SoundFX.playDash) {
+          window.SoundFX.playDash();
         }
       }
     }
@@ -323,6 +473,44 @@
     }
 
     update(dt) {
+      const isBoss2 = (window.Game && window.Game.activeBossId === 'boss2') || (window.GameConfig && window.GameConfig.activeBossId === 'boss2');
+
+      if (isBoss2) {
+        // Boss 2 Dynamic Obstacles Controller
+        // 1. Filter out dead / expired obstacles
+        this.obstacles = this.obstacles.filter(o => o.alive && !o.isDead);
+
+        // 2. Update active obstacles
+        for (const obs of this.obstacles) {
+          obs.update(dt);
+        }
+
+        // 3. Dynamic spawner interval ticker
+        const b2ObsCfg = (window.GameConfig && window.GameConfig.boss2 && window.GameConfig.boss2.obstacles) ||
+          (window.DEFAULT_GAME_CONFIG && window.DEFAULT_GAME_CONFIG.boss2 && window.DEFAULT_GAME_CONFIG.boss2.obstacles) || {
+            spawnerEnabled: true,
+            spawnInterval: 6.0,
+            lifetime: 5.0,
+            maxCount: 3,
+            size: 26,
+            hp: 40
+          };
+
+        if (b2ObsCfg.spawnerEnabled) {
+          this.boss2ObstacleTimer -= dt;
+          if (this.boss2ObstacleTimer <= 0) {
+            this.boss2ObstacleTimer = b2ObsCfg.spawnInterval || 6.0;
+            const alive = this.aliveObstacleCount;
+            const maxC = b2ObsCfg.maxCount || 3;
+            if (alive < maxC) {
+              this.spawnBoss2DynamicObstacle(b2ObsCfg);
+            }
+          }
+        }
+        return;
+      }
+
+      // Boss 1 Classic Pillar Update
       // 1. P3 telegraph ground warning & player push-out protection
       let justSpawned = false;
       if (this.p3WarningTimer > 0) {

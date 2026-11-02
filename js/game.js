@@ -87,7 +87,8 @@
       // Pop tutorial modal on startup (game awaits player confirmation)
       this.openTutorialModal();
 
-      requestAnimationFrame(this.loop.bind(this));
+      this.animFrameId = null;
+      this.startLoop();
     }
 
     cacheHUDElements() {
@@ -357,9 +358,9 @@
     restartGame() {
       this.isVictory = false;
       this.setPaused(false);
-      this.player.reset();
-      this.boss.reset();
-      this.arena.rebuildObstacles();
+      if (this.player) this.player.reset();
+      if (this.boss) this.boss.reset();
+      if (this.arena) this.arena.rebuildObstacles();
       this.balls = [];
       this.comboCount = 0;
       this.comboTimer = 0;
@@ -776,16 +777,27 @@
     }
 
     // -------------------------------------------------------------
-    // Main Game Loop
+    // Main Game Loop (Single rAF Instance Management)
     // -------------------------------------------------------------
+    startLoop() {
+      if (this.animFrameId) {
+        cancelAnimationFrame(this.animFrameId);
+        this.animFrameId = null;
+      }
+      this.lastTime = performance.now();
+      const tick = (timestamp) => {
+        this.loop(timestamp);
+        this.animFrameId = requestAnimationFrame(tick);
+      };
+      this.animFrameId = requestAnimationFrame(tick);
+    }
+
     loop(timestamp) {
       const rawDt = Math.min((timestamp - this.lastTime) / 1000, 0.08);
       this.lastTime = timestamp;
 
       this.update(rawDt);
       this.render();
-
-      requestAnimationFrame(this.loop.bind(this));
     }
 
     update(rawDt) {
@@ -852,17 +864,6 @@
       // 7. Update Boss (Frozen if Boss defeated / Victory)
       if (!this.isVictory && this.boss.alive) {
         this.boss.update(dt, this.player, arenaCfg);
-
-        // Check Boss 2 Pillar Collision in P1 (bumping into pillars breaks stealth)
-        if (this.boss instanceof window.Boss2 && this.boss.currentPhase === 1 && this.boss.isDrifting && this.arena) {
-          for (const obs of this.arena.aliveObstacles) {
-            const dist = window.Physics.dist(this.boss.x, this.boss.y, obs.x, obs.y);
-            if (dist <= (this.boss.hitboxRadius + obs.radius)) {
-              this.boss.breakStealthOnPillar(obs);
-              break;
-            }
-          }
-        }
       }
 
       // 8. Update Balls
@@ -991,10 +992,10 @@
 
       // Boss Phase Notches
       const bCfg = isBoss2 && window.GameConfig.boss2 ? window.GameConfig.boss2 : window.GameConfig.boss;
-      if (this.hud.notchP2 && bCfg.phase2) {
+      if (this.hud.notchP2 && bCfg && bCfg.phase2 && bCfg.phase2.thresholdMax !== undefined) {
         this.hud.notchP2.style.left = `${bCfg.phase2.thresholdMax * 100}%`;
       }
-      if (this.hud.notchP3 && bCfg.phase3) {
+      if (this.hud.notchP3 && bCfg && bCfg.phase3 && bCfg.phase3.thresholdMax !== undefined) {
         this.hud.notchP3.style.left = `${bCfg.phase3.thresholdMax * 100}%`;
       }
 
@@ -1009,19 +1010,21 @@
         } else if (isBoss2) {
           this.hud.bossStatusSubtext.style.display = 'block';
           if (boss.currentPhase === 1) {
-            if (boss.isRevealed) {
-              this.hud.bossStatusSubtext.textContent = `🎯 REVEALED / 破隐现身 (${boss.revealTimer.toFixed(1)}s) 抓紧反击!`;
-              this.hud.bossStatusSubtext.style.color = '#00e5ff';
+            if (boss.p1State === 'REVEALED' || boss.isRevealed) {
+              const revStr = (typeof boss.revealTimer === 'number') ? Math.max(0, boss.revealTimer).toFixed(1) : '0.0';
+              this.hud.bossStatusSubtext.textContent = `🎯 REVEALED: 真身暴露！立即攻击！（剩余 ${revStr}s）`;
+              this.hud.bossStatusSubtext.style.color = '#00ffff';
             } else {
-              this.hud.bossStatusSubtext.textContent = '👻 STEALTH DRIFT / 潜行漂移中 (引诱撞柱破隐!)';
-              this.hud.bossStatusSubtext.style.color = '#bd40ff';
+              this.hud.bossStatusSubtext.textContent = '👻 STEALTH DRIFT: 幽灵隐形无敌中！（用球击中随机障碍物将其震出真身！）';
+              this.hud.bossStatusSubtext.style.color = '#00e5ff';
             }
           } else if (boss.currentPhase === 2) {
             if (boss.p2State === 'STUNNED') {
-              this.hud.bossStatusSubtext.textContent = `💥 WALL STUNNED / 撞墙硬直 (${boss.p2StateTimer.toFixed(1)}s) 全力反击!`;
+              const stunStr = (typeof boss.p2StateTimer === 'number') ? boss.p2StateTimer.toFixed(1) : '0.0';
+              this.hud.bossStatusSubtext.textContent = `💥 OBSTACLE STUNNED / 撞柱硬直 (${stunStr}s) 全力反击!`;
               this.hud.bossStatusSubtext.style.color = '#00ffaa';
             } else if (boss.p2State === 'CHARGING') {
-              this.hud.bossStatusSubtext.textContent = '⚡ HIGH-SPEED CHARGE / 极速冲撞! 引诱撞墙!';
+              this.hud.bossStatusSubtext.textContent = '⚡ HIGH-SPEED CHARGE / 极速冲撞! 引诱其撞向障碍物!';
               this.hud.bossStatusSubtext.style.color = '#ff3366';
             } else if (boss.p2State === 'CHARGE_TELEGRAPH') {
               this.hud.bossStatusSubtext.textContent = '⚠️ CHARGE TELEGRAPH / 蓄力预警! 准备闪避!';
@@ -1031,7 +1034,8 @@
               this.hud.bossStatusSubtext.style.color = '#88aaff';
             }
           } else if (boss.currentPhase === 3) {
-            this.hud.bossStatusSubtext.textContent = `⚠️ SURVIVAL OVERLOAD / 弹幕自爆倒计时 (${boss.survivalTimer.toFixed(1)}s)!`;
+            const timeStr = (typeof boss.survivalTimer === 'number') ? boss.survivalTimer.toFixed(1) : '10.0';
+            this.hud.bossStatusSubtext.textContent = `🛡️ SURVIVAL OVERLOAD / 弹幕自爆 (${timeStr}s) 躲在障碍物掩体后!`;
             this.hud.bossStatusSubtext.style.color = '#ff3366';
           }
         } else if (boss.currentPhase === 3 && boss.isInvulnerable && !boss.p3ShieldBroken) {
@@ -1108,13 +1112,25 @@
     // -------------------------------------------------------------
     render() {
       const ctx = this.ctx;
+      const canvas = this.canvas;
+      if (!ctx || !canvas) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = this.width;
       const h = this.height;
 
-      // Clear Canvas
-      ctx.clearRect(0, 0, w, h);
-
+      // 1. Force reset Canvas 2D matrix to identity & clear full physical canvas with ambient color
       ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const ambientBg = (window.GameConfig.arena && window.GameConfig.arena.ambientColor) || '#0a0e14';
+      ctx.fillStyle = ambientBg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // 2. Set DPR-scaled coordinate system for game rendering
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Camera Center Translation
       ctx.translate(w / 2, h / 2);

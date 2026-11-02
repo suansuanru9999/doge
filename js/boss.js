@@ -79,6 +79,7 @@
       this.isPendingTeleport = false;
       this.postFireTeleportTimer = 0;
       this.postFireTeleportDuration = 1.0;
+      this.mixedShuffleBag = [];
     }
 
     // Count remaining alive obstacles in the arena (Single Source of Truth)
@@ -551,26 +552,55 @@
       }
     }
 
-    // Resolve specific ball preset or randomly sample from preset pool if 'mixed'
+    getNextMixedPreset() {
+      const bCfg = window.GameConfig && window.GameConfig.ball;
+      const weights = (bCfg && bCfg.mixedWeights) || { white: 1, purple: 1, red: 1 };
+      const wWhite = Math.max(0, weights.white !== undefined ? weights.white : 1);
+      const wPurple = Math.max(0, weights.purple !== undefined ? weights.purple : 1);
+      const wRed = Math.max(0, weights.red !== undefined ? weights.red : 1);
+
+      if (!this.mixedShuffleBag || this.mixedShuffleBag.length === 0) {
+        this.mixedShuffleBag = [];
+        const mult = (wWhite === 1 && wPurple === 1 && wRed === 1) ? 2 : 1;
+        for (let i = 0; i < wWhite * mult; i++) this.mixedShuffleBag.push('preset1'); // White
+        for (let i = 0; i < wPurple * mult; i++) this.mixedShuffleBag.push('preset3'); // Purple
+        for (let i = 0; i < wRed * mult; i++) this.mixedShuffleBag.push('preset2'); // Red
+
+        if (this.mixedShuffleBag.length === 0) {
+          this.mixedShuffleBag = ['preset1', 'preset3', 'preset2', 'preset1', 'preset3', 'preset2'];
+        }
+
+        // Fisher-Yates shuffle
+        for (let i = this.mixedShuffleBag.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = this.mixedShuffleBag[i];
+          this.mixedShuffleBag[i] = this.mixedShuffleBag[j];
+          this.mixedShuffleBag[j] = tmp;
+        }
+      }
+
+      let nextPreset = this.mixedShuffleBag.pop() || 'preset1';
+      // Anti-streak guard: prevent 3 or more consecutive uncatchable red balls
+      if (nextPreset === 'preset2' && (this.consecutiveRedCount || 0) >= 2) {
+        const nonRedIdx = this.mixedShuffleBag.findIndex(p => p !== 'preset2');
+        if (nonRedIdx !== -1) {
+          const nonRed = this.mixedShuffleBag[nonRedIdx];
+          this.mixedShuffleBag[nonRedIdx] = nextPreset;
+          nextPreset = nonRed;
+        }
+      }
+      if (nextPreset === 'preset2') {
+        this.consecutiveRedCount = (this.consecutiveRedCount || 0) + 1;
+      } else {
+        this.consecutiveRedCount = 0;
+      }
+      return nextPreset;
+    }
+
+    // Resolve specific ball preset or randomly sample from preset pool if 'mixed' (1:1:1 shuffle bag)
     resolvePresetKey(presetKey) {
       if (presetKey === 'mixed') {
-        const r = Math.random();
-        if (this.phase === 1) {
-          // P1: 60% White Core, 25% High-Dmg Purple, 15% Hazard Red
-          if (r < 0.60) return 'preset1';
-          if (r < 0.85) return 'preset3';
-          return 'preset2';
-        } else if (this.phase === 2) {
-          // P2: 40% White Core, 35% High-Dmg Purple, 25% Hazard Red
-          if (r < 0.40) return 'preset1';
-          if (r < 0.75) return 'preset3';
-          return 'preset2';
-        } else {
-          // P3: 35% White Core, 35% High-Dmg Purple, 30% Hazard Red
-          if (r < 0.35) return 'preset1';
-          if (r < 0.70) return 'preset3';
-          return 'preset2';
-        }
+        return this.getNextMixedPreset();
       }
       return presetKey || 'preset1';
     }

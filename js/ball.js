@@ -33,14 +33,38 @@
       this.initX = this.x;
       this.initY = this.y;
 
-      this.vx = props.vx || 0;
-      this.vy = props.vy || 0;
-      this.speed = props.speed || 360;
-
       // Configuration snapshot or preset inheritance
       this.isMinion = !!props.isMinion;
       const preset = props.preset || window.GameConfig.getActiveBallPreset();
       this.presetKey = props.presetKey || window.GameConfig.ball.activePreset;
+
+      // Speed & Direction Vector Resolution
+      let speed = props.speed || (preset && preset.speed) || 360;
+      let dirX = props.dirX;
+      let dirY = props.dirY;
+
+      if (dirX !== undefined && dirY !== undefined) {
+        const dLen = Math.hypot(dirX, dirY) || 1;
+        dirX /= dLen;
+        dirY /= dLen;
+      } else if (props.vx !== undefined && props.vy !== undefined) {
+        const vLen = Math.hypot(props.vx, props.vy);
+        if (vLen > 0.0001) {
+          dirX = props.vx / vLen;
+          dirY = props.vy / vLen;
+          speed = vLen;
+        } else {
+          dirX = 0;
+          dirY = 1;
+        }
+      } else {
+        dirX = 0;
+        dirY = 1;
+      }
+
+      this.speed = speed;
+      this.vx = (props.vx !== undefined) ? props.vx : dirX * speed;
+      this.vy = (props.vy !== undefined) ? props.vy : dirY * speed;
 
       if (this.isMinion) {
         this.radius = Math.max(6, Math.round((props.radius || preset.radius || 14) * 0.5));
@@ -88,14 +112,11 @@
       this.isPerfectThrow = false;
       this.damageMultiplier = 1.0;
 
-      // Sine wave trajectory base vector
-      this.baseDirX = props.dirX || 1;
-      this.baseDirY = props.dirY || 0;
-      const baseLen = Math.hypot(this.baseDirX, this.baseDirY) || 1;
-      this.baseDirX /= baseLen;
-      this.baseDirY /= baseLen;
-      this.perpDirX = -this.baseDirY;
-      this.perpDirY = this.baseDirX;
+      // Sine wave trajectory base vector (derived from normalized dirX/dirY)
+      this.baseDirX = dirX;
+      this.baseDirY = dirY;
+      this.perpDirX = -dirY;
+      this.perpDirY = dirX;
       this.traveledDist = 0;
 
       // Parabolic Arc parameters (used during rebound)
@@ -282,12 +303,16 @@
         this.x += this.vx * dt;
         this.y += this.vy * dt;
       } else if (this.trajectoryType === 'sine') {
-        this.traveledDist += this.speed * dt;
-        const forwardX = this.baseDirX * this.traveledDist;
-        const forwardY = this.baseDirY * this.traveledDist;
-        const offset = Math.sin(this.age * this.sineFrequency) * this.sineAmplitude;
-        this.x = (this.initX || (this.initX = this.x)) + forwardX + this.perpDirX * offset;
-        this.y = (this.initY || (this.initY = this.y)) + forwardY + this.perpDirY * offset;
+        // Forward movement in target aim/formation direction
+        this.x += this.baseDirX * this.speed * dt;
+        this.y += this.baseDirY * this.speed * dt;
+        // Perpendicular harmonic oscillation wave
+        const waveSpeed = Math.cos(this.age * this.sineFrequency) * this.sineAmplitude * this.sineFrequency;
+        this.x += this.perpDirX * waveSpeed * dt;
+        this.y += this.perpDirY * waveSpeed * dt;
+        // Keep vx, vy updated for physics/reflection
+        this.vx = this.baseDirX * this.speed + this.perpDirX * waveSpeed;
+        this.vy = this.baseDirY * this.speed + this.perpDirY * waveSpeed;
       } else if (this.trajectoryType === 'homing') {
         // Weak homing towards player
         const dx = player.x - this.x;
@@ -302,11 +327,26 @@
         this.y += this.vy * dt;
       }
 
-      // Check obstacle collision (Bounce without dealing damage to obstacle)
+      // Check obstacle collision
       if (obstacles && obstacles.length > 0) {
         for (const obs of obstacles) {
           if (!obs.alive) continue;
           if (window.Physics.circleCircle(this.x, this.y, this.radius, obs.x, obs.y, obs.radius)) {
+            const isBoss2 = (window.Game && window.Game.activeBossId === 'boss2') || obs.isDynamic;
+
+            // Boss 2 Cover Mechanic (P3 Bullet Hell & Tactical Cover):
+            // Enemy bullets colliding with dynamic obstacles are BLOCKED and DESTROYED, damaging the obstacle!
+            if (isBoss2) {
+              const bulletDmg = this.isMinion ? 6 : Math.max(12, Math.round((this.damage || 20) * 0.6));
+              obs.damage(bulletDmg);
+              this.alive = false;
+              this.trail = [];
+              window.SoundFX.playWallBounce();
+              window.ParticleSystem.spawnSparks(this.x, this.y, 10, '#00e5ff', 0.9);
+              return;
+            }
+
+            // Boss 1 Default Obstacle Reflection
             const dx = this.x - obs.x;
             const dy = this.y - obs.y;
             const d = Math.hypot(dx, dy) || 1;
@@ -386,6 +426,18 @@
               '#ffaa00'
             );
 
+            // Phase 1 Core Rule for Boss 2 (PHANTOM BOSS):
+            // When player thrown ball strikes an obstacle, shockwave exposes & reveals stealth Boss!
+            if (boss && boss instanceof window.Boss2 && boss.currentPhase === 1) {
+              if (boss.p1State === 'STEALTH_DRIFT' || boss.isStealthed || !boss.isRevealed) {
+                if (typeof boss.breakStealthByPlayerBall === 'function') {
+                  boss.breakStealthByPlayerBall(obs);
+                } else if (typeof boss.breakStealthOnPillar === 'function') {
+                  boss.breakStealthOnPillar(obs);
+                }
+              }
+            }
+
             // Rebound on hit triggers and lands on floor as pickable ball!
             this.trail = [];
             if (this.reboundOnHit && !this.isMinion) {
@@ -399,7 +451,8 @@
       }
 
       // Boss collision: only if boss is alive AND NOT invulnerable / hitbox disabled!
-      if (boss && boss.alive && !boss.isHitboxDisabled && boss.hasCollider !== false) {
+      // In P1 STEALTH_DRIFT, Boss is strictly invulnerable and hitbox is disabled, so thrown balls pass straight through!
+      if (boss && boss.alive && !boss.isHitboxDisabled && !boss.isInvulnerable && boss.hasCollider !== false) {
         const hitBoss = window.Physics.circleCircle(this.x, this.y, this.radius, boss.x, boss.y, boss.hitboxRadius);
         if (hitBoss) {
           const totalDamage = Math.round(this.baseDamage * this.damageMultiplier);

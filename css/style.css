@@ -2983,3 +2983,22 @@ textarea#json-textarea {
   }
 }
 
+/* ==========================================================================
+   Strict Modal & Overlay Hidden Guard (Prevents lingering dark boxes or touches)
+   ========================================================================== */
+#tutorial-modal:not(.open),
+#boss-select-modal:not(.open),
+#leaderboard-modal:not(.open),
+#game-result-modal:not(.open),
+#json-modal:not(.open),
+.boss-select-modal-overlay:not(.open),
+.tutorial-modal-overlay:not(.open),
+.leaderboard-modal-overlay:not(.open) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+

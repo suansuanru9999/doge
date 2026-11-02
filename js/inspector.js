@@ -786,6 +786,23 @@
         window.GameConfig.set('ball.onlyPlayerThrownBallsDrop', checked);
       });
       container.appendChild(g6);
+
+      // Group 7: 混合发射三色球权重 (Mixed Preset Weights)
+      const g7 = this.createGroup('混合模式三色球权重 (Mixed Preset Weights)');
+      const weights = ball.mixedWeights || { white: 1, purple: 1, red: 1 };
+      this.addSlider(g7, '白球相对权重 (White Ball Weight)', weights.white !== undefined ? weights.white : 1, 0, 5, 1, val => {
+        if (!ball.mixedWeights) ball.mixedWeights = { white: 1, purple: 1, red: 1 };
+        window.GameConfig.set('ball.mixedWeights.white', val);
+      });
+      this.addSlider(g7, '紫球相对权重 (Purple Ball Weight)', weights.purple !== undefined ? weights.purple : 1, 0, 5, 1, val => {
+        if (!ball.mixedWeights) ball.mixedWeights = { white: 1, purple: 1, red: 1 };
+        window.GameConfig.set('ball.mixedWeights.purple', val);
+      });
+      this.addSlider(g7, '红球相对权重 (Red Ball Weight)', weights.red !== undefined ? weights.red : 1, 0, 5, 1, val => {
+        if (!ball.mixedWeights) ball.mixedWeights = { white: 1, purple: 1, red: 1 };
+        window.GameConfig.set('ball.mixedWeights.red', val);
+      });
+      container.appendChild(g7);
     }
 
     // -------------------------------------------------------------
@@ -1098,15 +1115,56 @@
       });
       container.appendChild(g1);
 
-      // Group 2: Phase 1 隐形漂移与撞柱破隐 (Phase 1: Stealth Drift & Reveal)
-      const gP1 = this.createGroup('阶段 1: 隐形漂移与撞柱破隐 (P1: 100% ~ 70% HP)');
+      // Group Obs: 专属动态障碍物控制台 (Boss 2 Dynamic Obstacle Controller)
+      const obsCfg = b2.obstacles || {
+        spawnerEnabled: true,
+        spawnInterval: 6.0,
+        lifetime: 5.0,
+        maxCount: 3,
+        size: 26,
+        hp: 40
+      };
+      const gObs = this.createGroup('专属动态障碍物控制台 (Obstacle Controller)');
+      this.addToggle(gObs, '动态障碍物刷新开关 (Spawner Switch)', obsCfg.spawnerEnabled !== false, checked => {
+        window.GameConfig.set('boss2.obstacles.spawnerEnabled', checked);
+      });
+      this.addSlider(gObs, '动态刷新周期 (Spawn Interval)', obsCfg.spawnInterval || 6.0, 3.0, 15.0, 0.5, val => {
+        window.GameConfig.set('boss2.obstacles.spawnInterval', val);
+      }, 's');
+      this.addSlider(gObs, '障碍物存在存活时长 (Lifetime)', obsCfg.lifetime || 5.0, 2.0, 10.0, 0.5, val => {
+        window.GameConfig.set('boss2.obstacles.lifetime', val);
+      }, 's');
+      this.addSlider(gObs, '同屏最大障碍物上限 (Max Count)', obsCfg.maxCount || 3, 1, 6, 1, val => {
+        window.GameConfig.set('boss2.obstacles.maxCount', val);
+      });
+      this.addSlider(gObs, '障碍物体积半径 (Radius)', obsCfg.size || 26, 16, 45, 1, val => {
+        window.GameConfig.set('boss2.obstacles.size', val);
+      }, 'px');
+      this.addSlider(gObs, '障碍物耐久度血量 (HP)', obsCfg.hp || 40, 20, 150, 5, val => {
+        window.GameConfig.set('boss2.obstacles.hp', val);
+      });
+      container.appendChild(gObs);
+
+      // Group 2: Phase 1 隐形漂移与击破障碍物破隐 (Phase 1: Stealth Drift & Reveal)
+      const gP1 = this.createGroup('阶段 1: 隐形漂移与击打破隐 (P1: 100% ~ 70% HP)');
       this.addSlider(gP1, '漂移游走速度 (Drift Speed)', b2.phase1.driftSpeed, 40, 300, 10, val => {
         window.GameConfig.set('boss2.phase1.driftSpeed', val);
       }, 'px/s');
-      this.addSlider(gP1, '潜行隐身不透明度 (Stealth Opacity)', b2.phase1.stealthOpacity, 0.05, 0.5, 0.02, val => {
-        window.GameConfig.set('boss2.phase1.stealthOpacity', val);
+      const p1StealthOpVal = (b2.p1StealthOpacity !== undefined)
+        ? b2.p1StealthOpacity
+        : ((b2.phase1 && b2.phase1.stealthOpacity !== undefined) ? b2.phase1.stealthOpacity : 0.15);
+      this.addSlider(gP1, '潜行隐身不透明度 (Stealth Opacity)', p1StealthOpVal, 0.0, 1.0, 0.05, val => {
+        const numVal = parseFloat(val);
+        window.GameConfig.set('boss2.p1StealthOpacity', numVal);
+        window.GameConfig.set('boss2.phase1.stealthOpacity', numVal);
+        if (window.Game && window.Game.boss && window.Game.boss instanceof window.Boss2) {
+          window.Game.boss.stealthOpacity = numVal;
+          if (window.Game.boss.p1State === 'STEALTH_DRIFT') {
+            window.Game.boss.currentOpacity = numVal;
+          }
+        }
       });
-      this.addSlider(gP1, '撞柱破隐持续时长 (Reveal Duration)', b2.phase1.revealDurationOnHitPillar, 1.0, 10.0, 0.5, val => {
+      this.addSlider(gP1, '球击障碍物破隐现身时长 (Reveal Duration)', b2.phase1.revealDurationOnHitPillar, 1.0, 10.0, 0.5, val => {
         window.GameConfig.set('boss2.phase1.revealDurationOnHitPillar', val);
       }, 's');
       this.addSlider(gP1, '弹幕发射波次间隔 (Wave Rest Interval)', b2.phase1.fireInterval, 0.5, 5.0, 0.1, val => {
@@ -1143,8 +1201,8 @@
       });
       container.appendChild(gP1);
 
-      // Group 3: Phase 2 冲撞、撞墙硬直与后背反击 (Phase 2: Charge & Wall Stun)
-      const gP2 = this.createGroup('阶段 2: 极速冲撞、硬直与后背反击 (P2: 70% ~ 30% HP)');
+      // Group 3: Phase 2 冲撞、撞障碍物硬直与后背反击 (Phase 2: Charge & Obstacle Stun)
+      const gP2 = this.createGroup('阶段 2: 冲撞障碍物硬直与后背反击 (P2: 70% ~ 30% HP)');
       this.addSlider(gP2, '冲撞速度 (Charge Speed)', b2.phase2.chargeSpeed, 200, 1000, 25, val => {
         window.GameConfig.set('boss2.phase2.chargeSpeed', val);
       }, 'px/s');
@@ -1154,13 +1212,13 @@
       this.addSlider(gP2, '冲撞蓄力预警耗时 (Telegraph Duration)', b2.phase2.telegraphDuration || 0.6, 0.2, 2.0, 0.05, val => {
         window.GameConfig.set('boss2.phase2.telegraphDuration', val);
       }, 's');
-      this.addSlider(gP2, '撞墙眩晕硬直时长 (Wall Stun Duration)', b2.phase2.wallStunDuration, 1.0, 8.0, 0.5, val => {
+      this.addSlider(gP2, '撞障碍物眩晕硬直时长 (Obstacle Stun Duration)', b2.phase2.wallStunDuration, 1.0, 8.0, 0.5, val => {
         window.GameConfig.set('boss2.phase2.wallStunDuration', val);
       }, 's');
-      this.addSlider(gP2, '撞墙后背反击弹颗数 (Rear Fan Count)', b2.phase2.rearFanCount || 5, 3, 11, 1, val => {
+      this.addSlider(gP2, '撞障碍物后背反击弹颗数 (Rear Fan Count)', b2.phase2.rearFanCount || 5, 3, 11, 1, val => {
         window.GameConfig.set('boss2.phase2.rearFanCount', val);
       });
-      this.addSlider(gP2, '撞墙后背反击夹角 (Rear Fan Angle)', b2.phase2.rearFanSpreadAngle || 75, 30, 140, 5, val => {
+      this.addSlider(gP2, '撞障碍物后背反击夹角 (Rear Fan Angle)', b2.phase2.rearFanSpreadAngle || 75, 30, 140, 5, val => {
         window.GameConfig.set('boss2.phase2.rearFanSpreadAngle', val);
       }, '°');
       this.addSlider(gP2, '呼吸波次停火间隔 (Wave Rest Interval)', b2.phase2.fireInterval, 0.4, 5.0, 0.1, val => {
@@ -1191,8 +1249,8 @@
       });
       container.appendChild(gP2);
 
-      // Group 4: Phase 3 极限弹幕生存与自爆破灭 (Phase 3: Survival Bullet Hell)
-      const gP3 = this.createGroup('阶段 3: 极限弹幕生存与自爆 (P3: <= 30% HP)');
+      // Group 4: Phase 3 极限弹幕生存与障碍物掩体防御 (Phase 3: Survival Bullet Hell & Cover)
+      const gP3 = this.createGroup('阶段 3: 极限弹幕生存与障碍物掩体防御 (P3: <= 30% HP)');
       this.addSlider(gP3, '极限生存倒计时 (Survival Duration)', b2.phase3.survivalDuration, 5.0, 30.0, 1.0, val => {
         window.GameConfig.set('boss2.phase3.survivalDuration', val);
       }, 's');
