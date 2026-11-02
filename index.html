@@ -267,32 +267,37 @@
     <div id="tutorial-modal" class="tutorial-modal-overlay">
       <div class="tutorial-modal-card">
         <div class="tutorial-header">
-          <div class="tutorial-badge">TUTORIAL / 新手指南</div>
-          <h2 class="tutorial-title">【游戏操作指南 / HOW TO PLAY】</h2>
+          <div class="tutorial-header-text">
+            <div class="tutorial-badge">TUTORIAL / 新手指南</div>
+            <h2 class="tutorial-title">【游戏操作指南 / HOW TO PLAY】</h2>
+          </div>
+          <button id="btn-close-tutorial" class="btn-icon btn-close-tutorial" title="关闭教程并开始战斗">✕</button>
         </div>
         
         <div class="tutorial-body">
-          <div class="tutorial-point point-move">
-            <div class="point-icon">🟣</div>
-            <div class="point-content">
-              <div class="point-title">移动 (MOVEMENT)</div>
-              <div class="point-desc">左侧<strong>虚拟摇杆</strong>（或 PC 键盘 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>）负责控制角色 360° 走位回避。</div>
+          <div class="tutorial-points-group">
+            <div class="tutorial-point point-move">
+              <div class="point-icon">🟣</div>
+              <div class="point-content">
+                <div class="point-title">移动 (MOVEMENT)</div>
+                <div class="point-desc">左侧<strong>虚拟摇杆</strong>（或 PC <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>）控制角色 360° 走位回避。</div>
+              </div>
             </div>
-          </div>
 
-          <div class="tutorial-point point-combat">
-            <div class="point-icon">🟢</div>
-            <div class="point-content">
-              <div class="point-title">接球与反击 (CATCH & COUNTER)</div>
-              <div class="point-desc">右边的 <strong>【接球键】与【闪避键】均可用于接球</strong>！成功接球后将瞬间触发<strong>子弹时间</strong>（全局慢动作），此时保持按住并<strong>反向拖拽蓄力瞄准</strong>，松手即可将球狠狠砸向 BIGBOSS！</div>
+            <div class="tutorial-point point-combat">
+              <div class="point-icon">🟢</div>
+              <div class="point-content">
+                <div class="point-title">接球与反击 (CATCH & COUNTER)</div>
+                <div class="point-desc">右侧<strong>【接球】与【闪避】均可接球</strong>！接球后触发<strong>子弹时间</strong>，按住<strong>反向拖拽瞄准</strong>，松手射击！</div>
+              </div>
             </div>
-          </div>
 
-          <div class="tutorial-point point-dash">
-            <div class="point-icon">🛡️</div>
-            <div class="point-content">
-              <div class="point-title">闪避与无敌 (DASH & I-FRAMES)</div>
-              <div class="point-desc"><strong>【闪避键】</strong>不仅能接球，还拥有宝贵的<strong>无敌帧（I-frames）</strong>，可在危险时刻穿透弹幕或躲避不可接的红球。</div>
+            <div class="tutorial-point point-dash">
+              <div class="point-icon">🛡️</div>
+              <div class="point-content">
+                <div class="point-title">闪避与无敌 (DASH & I-FRAMES)</div>
+                <div class="point-desc"><strong>【闪避键】</strong>不仅能接球，更拥有<strong>无敌帧（I-frames）</strong>，可穿透致命弹幕或躲避不可接红球。</div>
+              </div>
             </div>
           </div>
 
@@ -301,21 +306,21 @@
               <span class="ball-dot white"></span>
               <div class="tri-ball-info">
                 <strong>标准白球</strong>
-                <span>可接可投，标准伤害与子弹时间瞄准</span>
+                <span>可接可投，标准伤害</span>
               </div>
             </div>
             <div class="tri-ball-pill pill-purple">
               <span class="ball-dot purple"></span>
               <div class="tri-ball-info">
                 <strong>强袭紫球</strong>
-                <span>接球判定较窄（高风险），反弹造成<strong>双倍伤害 (2.0x)</strong></span>
+                <span>窄判定窗口，反弹<strong>双倍伤害 (2.0x)</strong></span>
               </div>
             </div>
             <div class="tri-ball-pill pill-red">
               <span class="ball-dot red"></span>
               <div class="tri-ball-info">
                 <strong>重型红球</strong>
-                <span><strong>严禁接球</strong>！触碰受罚，必须<strong>闪避无敌穿透</strong></span>
+                <span><strong>严禁接球</strong>！触碰受罚，必须<strong>闪避穿透</strong></span>
               </div>
             </div>
           </div>

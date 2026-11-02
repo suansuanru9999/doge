@@ -1843,17 +1843,20 @@ textarea#json-textarea {
 
 /* ================= Leaderboard Modal ================= */
 #leaderboard-modal {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100% !important;
+  height: 100% !important;
   background: rgba(6, 9, 14, 0.85);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 10000;
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 #leaderboard-modal.open {
@@ -1864,8 +1867,8 @@ textarea#json-textarea {
   background: rgba(14, 20, 28, 0.96);
   border: 1px solid var(--panel-border);
   border-radius: 14px;
-  width: min(580px, 94vw);
-  max-height: 88vh;
+  width: min(580px, 94%);
+  max-height: 92%;
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 229, 255, 0.2);
@@ -2000,28 +2003,29 @@ textarea#json-textarea {
 }
 
 /* ==========================================================================
-   Tutorial / How to Play Modal (游戏操作指南弹窗)
+   Tutorial / How to Play Modal (游戏操作指南弹窗 - 移动端全适配优化)
    ========================================================================== */
 #tutorial-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(6, 10, 18, 0.82);
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(6, 10, 18, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 12000;
-  padding: 12px;
+  padding: clamp(6px, 1.5vw, 14px);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 #tutorial-modal.open {
   display: flex;
-  animation: tutorialFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: tutorialFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes tutorialFadeIn {
@@ -2036,29 +2040,38 @@ textarea#json-textarea {
 }
 
 .tutorial-modal-card {
-  background: linear-gradient(145deg, rgba(16, 24, 38, 0.96) 0%, rgba(9, 14, 24, 0.98) 100%);
-  border: 1px solid rgba(0, 240, 255, 0.35);
-  border-radius: 16px;
-  width: min(620px, 95vw);
-  max-height: min(92vh, 680px);
+  background: linear-gradient(145deg, rgba(16, 24, 38, 0.98) 0%, rgba(9, 14, 24, 0.99) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  border-radius: 14px;
+  width: min(700px, 98%);
+  max-height: 96%;
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .tutorial-header {
-  padding: 16px 22px 12px 22px;
+  flex-shrink: 0;
+  padding: 10px 16px 8px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(12, 18, 28, 0.8);
+  background: rgba(12, 18, 28, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tutorial-header-text {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  flex: 1;
 }
 
 .tutorial-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 2px;
   color: #00f0ff;
@@ -2068,20 +2081,48 @@ textarea#json-textarea {
 
 .tutorial-title {
   margin: 0;
-  font-size: clamp(16px, 3.2vw, 22px);
+  font-size: clamp(14px, 2.8vw, 19px);
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   color: #ffffff;
   text-align: center;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.btn-close-tutorial {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8b949e;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-close-tutorial:hover, .btn-close-tutorial:active {
+  color: #ffffff;
+  border-color: #00f0ff;
+  background: rgba(0, 240, 255, 0.2);
 }
 
 .tutorial-body {
-  padding: 16px 20px;
+  flex: 1 1 auto;
+  min-height: 0; /* CRITICAL: Enables flex child internal scrolling */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 240, 255, 0.3) transparent;
 }
@@ -2094,24 +2135,25 @@ textarea#json-textarea {
   border-radius: 3px;
 }
 
+.tutorial-points-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .tutorial-point {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
+  border-radius: 9px;
   transition: all 0.2s ease;
 }
 
-.tutorial-point:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(0, 240, 255, 0.2);
-}
-
 .point-icon {
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1.2;
   flex-shrink: 0;
   margin-top: 1px;
@@ -2120,20 +2162,20 @@ textarea#json-textarea {
 .point-content {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .point-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
 }
 
 .point-desc {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #a0aec0;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .point-desc strong {
@@ -2144,59 +2186,52 @@ textarea#json-textarea {
   background: #1a2233;
   border: 1px solid #2d3b55;
   color: #00f0ff;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 /* Tri-Color Ball Matrix inside Tutorial */
 .tutorial-tri-balls {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 7px;
+  margin-top: 2px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-@media (max-width: 600px) {
-  .tutorial-tri-balls {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tri-ball-pill {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ball-dot {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .ball-dot.white {
   background: #ffffff;
-  box-shadow: 0 0 10px #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
 }
 
 .ball-dot.purple {
   background: #bd40ff;
-  box-shadow: 0 0 10px #e066ff;
+  box-shadow: 0 0 8px #e066ff;
 }
 
 .ball-dot.red {
   background: #ff2233;
-  box-shadow: 0 0 10px #ff0033;
+  box-shadow: 0 0 8px #ff0033;
 }
 
 .tri-ball-info {
@@ -2206,19 +2241,14 @@ textarea#json-textarea {
 }
 
 .tri-ball-info strong {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #ffffff;
 }
 
 .tri-ball-info span {
-  font-size: 10.5px;
+  font-size: 10px;
   color: #8b949e;
-  line-height: 1.35;
-}
-
-.tri-ball-info span strong {
-  color: #ffcc00;
-  font-weight: 700;
+  line-height: 1.3;
 }
 
 .pill-purple .tri-ball-info strong {
@@ -2230,9 +2260,10 @@ textarea#json-textarea {
 }
 
 .tutorial-footer {
-  padding: 14px 20px 18px 20px;
+  flex-shrink: 0;
+  padding: 10px 16px 12px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 15, 24, 0.9);
+  background: rgba(10, 15, 24, 0.96);
   display: flex;
   justify-content: center;
 }
@@ -2241,28 +2272,158 @@ textarea#json-textarea {
   background: linear-gradient(135deg, #00d2ff 0%, #00f0aa 100%);
   color: #061018;
   border: none;
-  border-radius: 12px;
-  padding: 12px 36px;
-  font-size: 16px;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: clamp(13px, 2.4vw, 15px);
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   cursor: pointer;
   box-shadow: 0 0 25px rgba(0, 240, 170, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.16s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: min(380px, 100%);
+  gap: 6px;
+  width: min(340px, 100%);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-start-game:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 0 35px rgba(0, 240, 170, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 35px rgba(0, 240, 170, 0.65);
 }
 
 .btn-start-game:active {
   transform: translateY(1px) scale(0.98);
   box-shadow: 0 0 15px rgba(0, 240, 170, 0.3);
+}
+
+/* Landscape / Low-Height Devices (Mobile 横屏极致适配) */
+@media (max-height: 520px), (orientation: landscape) and (max-height: 600px) {
+  .tutorial-modal-card {
+    max-height: 98%;
+    width: min(740px, 98%);
+  }
+
+  .tutorial-header {
+    padding: 6px 12px 5px 12px;
+  }
+
+  .tutorial-badge {
+    font-size: 9px;
+  }
+
+  .tutorial-title {
+    font-size: 13.5px;
+  }
+
+  .btn-close-tutorial {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .tutorial-body {
+    padding: 6px 12px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .tutorial-points-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tutorial-point {
+    padding: 4px 7px;
+    gap: 7px;
+  }
+
+  .point-icon {
+    font-size: 15px;
+  }
+
+  .point-title {
+    font-size: 11px;
+  }
+
+  .point-desc {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .tutorial-tri-balls {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding-left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: space-around;
+  }
+
+  .tri-ball-pill {
+    padding: 4px 6px;
+    gap: 5px;
+  }
+
+  .ball-dot {
+    width: 9px;
+    height: 9px;
+  }
+
+  .tri-ball-info strong {
+    font-size: 10.5px;
+  }
+
+  .tri-ball-info span {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .tutorial-footer {
+    padding: 6px 12px 7px 12px;
+  }
+
+  .btn-start-game {
+    padding: 7px 18px;
+    font-size: 12.5px;
+    width: min(260px, 100%);
+  }
+}
+
+/* Portrait Mobile Devices */
+@media (max-width: 600px) and (min-height: 521px) {
+  .tutorial-modal-card {
+    width: 96%;
+    max-height: 94%;
+  }
+
+  .tutorial-point {
+    padding: 8px 10px;
+  }
+
+  .point-title {
+    font-size: 12px;
+  }
+
+  .point-desc {
+    font-size: 11px;
+  }
+
+  .tutorial-tri-balls {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .tri-ball-pill {
+    padding: 6px 8px;
+  }
 }
 

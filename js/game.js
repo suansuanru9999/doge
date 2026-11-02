@@ -111,16 +111,45 @@
         btnLeaderboardRestart: document.getElementById('btn-leaderboard-restart'),
         leaderboardTableBody: document.getElementById('leaderboard-table-body'),
         tutorialModal: document.getElementById('tutorial-modal'),
-        btnStartGame: document.getElementById('btn-start-game')
+        btnStartGame: document.getElementById('btn-start-game'),
+        btnCloseTutorial: document.getElementById('btn-close-tutorial')
       };
 
       if (this.hud.btnStartGame) {
         const startFight = (e) => {
-          if (e) e.stopPropagation();
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
           this.closeTutorialModal();
         };
         this.hud.btnStartGame.addEventListener('click', startFight);
         this.hud.btnStartGame.addEventListener('touchend', startFight, { passive: false });
+      }
+
+      if (this.hud.btnCloseTutorial) {
+        const closeT = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.closeTutorialModal();
+        };
+        this.hud.btnCloseTutorial.addEventListener('click', closeT);
+        this.hud.btnCloseTutorial.addEventListener('touchend', closeT, { passive: false });
+      }
+
+      if (this.hud.tutorialModal) {
+        const backdropClick = (e) => {
+          if (e.target === this.hud.tutorialModal) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+            this.closeTutorialModal();
+          }
+        };
+        this.hud.tutorialModal.addEventListener('click', backdropClick);
       }
 
       if (this.hud.btnRestart) {

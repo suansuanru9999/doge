@@ -560,6 +560,11 @@ $$\text{autoScale} = \min\left(1.0, \; \min\left(\frac{W_{\text{screen}}}{W_{\te
 4. **开始战斗交互闭环**：
    - 弹窗底部配备高饱和霓虹发光按钮 **`[⚔️ 开始战斗 / START GAME]`**（`#btn-start-game`）；
    - 点击/触摸后立即关闭教程弹窗，播放音效激活底层引擎，正式拉开 BOSS 战序幕。
+5. **移动端与旋转屏幕全适配保护 (Mobile & Landscape Viewport Optimization)**：
+   - **坐标系解耦**：采用 `position: absolute !important; width: 100% !important; height: 100% !important;` 严格吸附于 `#app-container` 内部，完美适配手机端 90° 旋转横屏逻辑（`.rotate-landscape`），彻底杜绝因 `position: fixed` 和 `100vw/100vh` 导致的视口错位和溢出截断；
+   - **弹性布局与弹性高度限制**：`.tutorial-modal-card` 设立 `max-height: 96%`，内部 `.tutorial-body` 赋予 `min-height: 0; flex: 1 1 auto; overflow-y: auto;`，确保底部开始按钮和顶部关闭按钮永远停靠在屏幕可见区域内；
+   - **横屏自适应分栏网格**：针对手机横屏低高度场景（`max-height <= 520px`），自动切换为左侧核心要点、右侧三色球矩阵的双列排布，大幅压降纵向占用，让战斗按钮一目了然、触手可及；
+   - **多通道关闭容错**：除开始战斗按钮外，提供右上角 `[✕]` 关闭按钮及点击暗色遮罩关闭功能。
 
 ### 15.2 白球、紫球、红球三元核心博弈规则 (Three-Tier Ball Combat Dynamic)
 游戏将战场上出现的核心交互球规范为清晰的三元对抗矩阵，赋予玩家截然不同的策略权衡：
